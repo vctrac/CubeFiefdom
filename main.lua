@@ -443,8 +443,8 @@ end
 radio_button_new("pencil",tx,ty)
 tx = tx+tools_button_size
 radio_button_new("brush",tx,ty)
-tx = tx+tools_button_size
-radio_button_new("rotate",tx,ty)
+-- tx = tx+tools_button_size
+-- radio_button_new("rotate",tx,ty)
 tx = 2
 ty = ty+tools_button_size
 
@@ -819,9 +819,11 @@ function love.draw()
     -- lg.setDepthMode("lequal", false)
     pivot.model:draw()
     Cube_map:draw()
-    lg.setColor(1,1,1)
+    -- lg.setColor(1,1,1)
     if mouse.active and mouse.tool=="pencil" then
+        lg.setColor(1,1,1)
         new_text:draw( )
+        
         lg.setColor(1,1,1,0.6)
         lg.setMeshCullMode( "back" )
         select_model:draw( )
