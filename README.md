@@ -1,2 +1,2 @@
 # CubeFiefdom
-A Cube Kingdom clone made in love2d
+ A Cube kingdom clone made in love2d.
