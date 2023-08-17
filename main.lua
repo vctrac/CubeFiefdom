@@ -115,7 +115,7 @@ function To_id(prefix, coords)
     -- return string.format("%d:%d:%d", unpack(pos))
 end
 function From_id(id)
-    print(id)
+    -- print(id)
     -- local id_type = id:match("(.*) ")
     local sid = id:match(" (.*)")
     local t = {}
@@ -757,7 +757,7 @@ function love.load(...)
     -- APP.add_color("ff999999")
     Cube_map:load_file(cko_file.load("example.cko"))
 
-    new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true, scale = 0.5})
+    new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     select_model = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
     mouse:set_texture("color 0:0")
