@@ -144,6 +144,7 @@ require"library.g3d"
 
 CUBE = "model/cube.obj" --default cube model, single cube projected texture
 DICE = "model/dice.obj" --alternative cube model, six sides spritesheet texture
+TILE_SIZE = 16
 
 lg.setDefaultFilter("nearest", "nearest")
 
@@ -168,28 +169,30 @@ IMAGE.texture_off = IMAGE.texture_on
 IMAGE.undo_off = IMAGE.undo
 IMAGE.redo_off = IMAGE.redo
 -- 
-local tile_size = 16
+
+
 APP = {
     toggle = {light=true, grid=false, texture=true},
     shader = lg.newShader(g3d.shaderpath, "shader/lighting.frag"),
     atlas = nil,
     textures = {},
     palette = {},
+    colors = {},
     first_person_view = false,
 }
 function APP.load_texture(filename)
     APP.atlas_data = love.image.newImageData("image/"..filename)
     APP.atlas = lg.newImage(APP.atlas_data)
     local iw,ih = APP.atlas:getDimensions()
-    for x=0,math.floor(iw/tile_size)-1 do
-        for y=0,math.floor(ih/tile_size)-1 do
+    for x=0,math.floor(iw/TILE_SIZE)-1 do
+        for y=0,math.floor(ih/TILE_SIZE)-1 do
             local id = To_id("texture", {x,y})
-            APP.textures[id] = Image_from_quad( APP.atlas_data, x*tile_size,y*tile_size,tile_size,tile_size)
+            APP.textures[id] = Image_from_quad( APP.atlas_data, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
         end
     end
 end
 function APP.add_quad(id, x, y)
-    APP.textures[id] = Image_from_quad( APP.atlas, x*tile_size,y*tile_size,tile_size,tile_size)
+    APP.textures[id] = Image_from_quad( APP.atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
 end
 -- function APP.add_color_old(id)
 --     if APP.palette[id] then return false end
@@ -208,7 +211,7 @@ function APP.add_color(coords, color)
     local image_data = love.image.newImageData(1,1)
     image_data:setPixel(0,0,unpack(color))
     APP.palette[id] = lg.newImage(image_data)
-
+    APP.colors[id] = color
     return id
 end
 -- function APP.load_palette(filename)
@@ -236,6 +239,15 @@ end
     -- APP.palette_atlas = lg.newImage(image_data)
     -- image_data:mapPixel(function(x,y,r,g,b,a) return nr,ng,nb end)
 -- end
+MOUSE = {
+    old_x = 0,
+    old_x = 0,
+    active = false,
+    tool = "pencil",
+    texture = "texture 0:0",
+    color = "color 0:0",
+    texture_type = "texture",
+}
 
 --------------------------------------------------------------------------------------
 -- ##        #######   ######     ###    ##       
@@ -250,34 +262,13 @@ end
 local vec2 = cpml.vec2
 local vec3 = cpml.vec3
 local camera = g3d.camera
-local Inky = require"library.inky"
 local Cube_map = require"scene"
-
+local hud = require"hud"
 local select_model, use-- = g3d.newSprite("image/use.png",{scale = 0.5})
 
 local Key = {
     ctrl = false,
     alt = false
-}
-local mouse = {
-    old_x = 0,
-    old_x = 0,
-    active = false,
-    selected = {
-        pos = vec3(),
-        new = vec3(),
-        id = "",
-    },
-    tool = "pencil",
-    texture = "texture 0:0",
-    color = "color 0:0",
-    texture_type = "texture",
-    set_texture = function(self, texture_index)
-        local it = Id_type(texture_index)
-        self[it] = texture_index
-        self.texture_type = it
-        select_model.mesh:setTexture(APP[it == "color" and "palette" or "textures"][texture_index])
-    end
 }
 
 ---@return vec3:result or false
@@ -342,389 +333,54 @@ local function pivot_movement(dt)
         pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
     end
 end
---------------------------------------------------------------------------------------
--- ##     ## ##     ## ########  
--- ##     ## ##     ## ##     ## 
--- ##     ## ##     ## ##     ## 
--- ######### ##     ## ##     ## 
--- ##     ## ##     ## ##     ## 
--- ##     ## ##     ## ##     ## 
--- ##     ##  #######  ########  
---------------------------------------------------------------------------------------
--- local Button = require"ui.button"
-local tools_button_size = 22
-local bar_height = 14
-local hud = {
-    scene   = Inky.scene(),
-    window_pos = cpml.quat(10,10,tile_size*8+4,600),
-    tools = { },
-    palette = { },
-    textures = { },
-    current_texture = nil,
-    current_color = nil,
-    colors = {
-        on   = {1,1,1,0.75},
-        off  = {0.5,0.5,0.5,0.75},
-        on_over = {1,1,1,1},
-        off_over = {0.8,0.8,0.8,1},
-        click = {1,1,0,1},
-    },
-    atlas_pos = {0,0}
-}
--- local 
 
-hud.pointer = Inky.pointer(hud.scene)
-local window = Inky.defineElement(function(self)
-    return function(_, x, y, w, h)
-        lg.setColor(0.5,0.5,0.7)
-        lg.rectangle("fill",x,y,w,h)
-        lg.setColor(0.2,0.2,0.2)
-        lg.rectangle("line",x,y,w,h)
-    end
-end)
-hud.window = window(hud.scene)
 
-local window_bar = Inky.defineElement(function(self)
-    self.props.grab = false
-    self.props.gpx = 0
-    self.props.gpy = 0
-    self:onPointer("release", function(self)
-        self.props.grab = false
-    end)
-    self:onPointer("press", function(self)
-        self.props.grab = true
-        local mx,my = love.mouse.getPosition()
-        self.props.gpx = mx - hud.window_pos.x
-        self.props.gpy = my - hud.window_pos.y
-    end)
-    return function(_, x, y, w, h)
-        if self.props.grab then
-            lg.setColor(0.3,0.3,0.3)
-        else
-            lg.setColor(0.2,0.2,0.2)
-        end
-        lg.rectangle("fill",x,y,w,h)
-        lg.setColor(1,1,1)
-        lg.printf("tools",x,y,w,"center")
-    end
-end)
-hud.window_bar = window_bar(hud.scene)
-local tx,ty = 2, bar_height+2
-
-local function radio_button_new(name,xx,yy)
-    local button = Inky.defineElement(function(self)
-        self:onPointerEnter(function(self, pointer, ...)
-            self.props.color ="on_over"
-        end)
-        self:onPointerExit(function(self, pointer, ...)
-            self.props.color = mouse.tool==name and "on" or "off"
-        end)
-        self:onPointer("release", function(self)
-            self.props.setActiveKey(self.props.key)
-            -- self.props.color = "on"
-        end)
-        self:onPointer("press", function(self)
-            self.props.color = "click"
-        end)
-        return function(_, x, y, w, h)
-            lg.setColor(hud.colors[self.props.color])
-            lg.draw(IMAGE.button_frame, x, y)
-            lg.setColor(1,1,1)
-            lg.draw(IMAGE[name], x, y)
-        end
-    end)
-    hud.tools[name] = button(hud.scene)
-    hud.tools[name].props.key = name
-    hud.tools[name].props.color = mouse.tool==name and "on" or "off"
-    hud.tools[name].props.x = xx
-    hud.tools[name].props.y = yy
+APP.cube_map_history = function(name)
+    Cube_map[name](Cube_map)
 end
-
-radio_button_new("pencil",tx,ty)
-tx = tx+tools_button_size
-radio_button_new("brush",tx,ty)
--- tx = tx+tools_button_size
--- radio_button_new("rotate",tx,ty)
-tx = 2
-ty = ty+tools_button_size
-
-local function setToolActiveKey(key)
-    for _,tool in pairs(hud.tools) do
-        tool.props.color = (tool.props.key==key) and "on" or "off"
-        tool.props.activeKey = key
-    end
-    mouse.tool = key
-end
-for _,tool in pairs(hud.tools) do
-    tool.props.setActiveKey = setToolActiveKey
-end
-
-local function toggle_button_new(name, xx, yy)
-    local button = Inky.defineElement(function(self)
-        self.props.state = APP.toggle[name] and "_on" or "_off"
-        self.props.color = APP.toggle[name] and "on" or "off"
-
-        self:onPointerEnter(function(self, pointer, ...)
-            self.props.color = (APP.toggle[name] and "on" or "off").."_over"
-        end)
-        self:onPointerExit(function(self, pointer, ...)
-            self.props.color = APP.toggle[name] and "on" or "off"
-        end)
-        self:onPointer("release", function(self)
-            APP.toggle[name] = not APP.toggle[name]
-            self.props.state = APP.toggle[name] and "_on" or "_off"
-            self.props.color = (APP.toggle[name] and "on" or "off").."_over"
-        end)
-        self:onPointer("press", function(self)
-            self.props.color = "click"
-        end)
-        return function(_, x, y, w, h)
-            lg.setColor(hud.colors[self.props.color])
-            lg.draw(IMAGE.button_frame, x, y)
-            lg.setColor(1,1,1)
-            lg.draw(IMAGE[name..self.props.state], x, y)
-        end
-    end)
-    hud.tools[name] = button(hud.scene)
-    hud.tools[name].props.x = xx
-    hud.tools[name].props.y = yy
-end
--- local button_size = 22
-
-toggle_button_new("light", tx, ty)
-tx = tx+tools_button_size
-toggle_button_new("texture", tx, ty)
-tx = tx+tools_button_size
-toggle_button_new("grid", tx, ty)
-
-local function edit_button_new(name, xx, yy)
-    local button = Inky.defineElement(function(self)
-        self.props.color = "off"
-        self:onPointerEnter(function(self, pointer, ...)
-            self.props.color ="on"
-        end)
-        self:onPointerExit(function(self, pointer, ...)
-            self.props.color = "off"
-        end)
-        self:onPointer("release", function(self)
-            Cube_map[name](Cube_map)
-            self.props.color = "on"
-        end)
-        self:onPointer("press", function(self)
-            self.props.color = "click"
-        end)
-        return function(_, x, y, w, h)
-            lg.setColor(hud.colors[self.props.color])
-            lg.draw(IMAGE.button_frame, x, y)
-            lg.setColor(1,1,1)
-            lg.draw(IMAGE[name], x, y)
-        end
-    end)
-    hud.tools[name] = button(hud.scene)
-    hud.tools[name].props.x = xx
-    hud.tools[name].props.y = yy
-end
-tx = tx+tools_button_size
-edit_button_new("undo", tx, ty)
-tx = tx+tools_button_size
-edit_button_new("redo", tx, ty)
-ty = ty + tools_button_size + 5
-tx = 2
-local label_bar = Inky.defineElement(function(self)
-    return function(_, x, y, w, h)
-        lg.setColor(0.2,0.2,0.2)
-        lg.rectangle("fill",x,y,w,h)
-        lg.setColor(1,1,1)
-        lg.printf(self.props.text,x,y,w,"center")
-    end
-end)
-
-hud.palette_label = label_bar(hud.scene)
-hud.palette_label.props.text = "Palette"
-hud.palette_label.props.x = 0
-hud.palette_label.props.y = ty
-ty = ty + bar_height + 2
-hud.palette_pos = {tx,ty}
-ty = ty +136
-local function show_color(name,xx,yy)
-
-    local button = Inky.defineElement(function(self)
-        
-        return function(_, x, y, w, h)
-            lg.setColor(0,0,0,0.5)
-            lg.rectangle("fill", x-1,y-1,w+2,h+2)
-            lg.setColor(1,1,1)
-            lg.draw(APP.palette[mouse.color],x,y,0, w, h)
-        end
-    end)
-
-    hud.current_color = button(hud.scene)
-    hud.current_color.props.x = xx
-    hud.current_color.props.color = name
-    hud.current_color.props.y = yy
-end
-
-show_color(mouse.color, tx,ty)
-ty = ty+ 160
-local function new_color_button(name,xx,yy)
-    local button = Inky.defineElement(function(self)
-        self.props.active = false
-        self:onPointerEnter(function(self, pointer, ...)
-            self.props.active = true
-        end)
-        self:onPointerExit(function(self, pointer, ...)
-            self.props.active = false
-        end)
-        self:onPointer("release", function(self)
-            mouse:set_texture(name)
-        end)
-        return function(_, x, y, w, h)
-            if self.props.active then
-                lg.setColor(0,0,0,1)
-                local s = tile_size*1.5
-                local s2 = tile_size*0.25
-                lg.rectangle("fill", x-s2-1,y-s2-1,s+2,s+2)
-                lg.setColor(1,1,1)
-                -- print("dfsf")
-                lg.draw(APP.palette[name],x-s2,y-s2,0,s,s)
-                -- lg.draw(APP.palette[name],x,y,0,s,s)
-            end
-        end
-    end)
-    
-    -- local xx,yy = From_id(name)
-
-    hud.palette[name] = button(hud.scene)
-    hud.palette[name].props.x = hud.palette_pos[1]+xx*tile_size
-    hud.palette[name].props.y = hud.palette_pos[2]+yy*tile_size
-end
-
-hud.texture_label = label_bar(hud.scene)
-hud.texture_label.props.text = "Texture"
-hud.texture_label.props.x = 0
-hud.texture_label.props.y = ty
-ty = ty + bar_height + 2
-hud.atlas_pos = {tx,ty}
-local function new_texture_button(name)
-
-    local button = Inky.defineElement(function(self)
-        self.props.active = false
-        self:onPointerEnter(function(self, pointer, ...)
-            self.props.active = true
-        end)
-        self:onPointerExit(function(self, pointer, ...)
-            self.props.active = false
-        end)
-        self:onPointer("release", function(self)
-            mouse:set_texture(name)
-        end)
-        return function(_, x, y, w, h)
-            if self.props.active then
-                lg.setColor(0,0,0,0.5)
-                local s = 1.5
-                local sp = tile_size*0.25
-                lg.rectangle("fill", x-sp-1,y-sp-1,w*s+2,h*s+2)
-                lg.setColor(1,1,1)
-                lg.draw(APP.textures[name],x-sp,y-sp,0,s,s)
-            end
-        end
-    end)
-    
-    local xx,yy = From_id(name)
-
-    hud.textures[name] = button(hud.scene)
-    hud.textures[name].props.x = hud.atlas_pos[1]+xx*tile_size
-    hud.textures[name].props.y = hud.atlas_pos[2]+yy*tile_size
-end
--- local iw,ih = APP.atlas_data:getDimensions()
-ty = ty +128
-local function show_texture(name,xx,yy)
-
-    local button = Inky.defineElement(function(self)
-        
-        return function(_, x, y, w, h)
-            lg.setColor(0,0,0,0.5)
-            lg.rectangle("fill", x-1,y-1,w+2,h+2)
-            lg.setColor(1,1,1)
-            lg.draw(APP.textures[mouse.texture],x,y,0,4,4)
-        end
-    end)
-
-    hud.current_texture = button(hud.scene)
-    hud.current_texture.props.x = xx
-    -- hud.current_texture.props.texture = name
-    hud.current_texture.props.y = yy
-end
-show_texture(mouse.texture, 8, ty+8)
-
-function hud:update()
-    if self.window_bar.props.grab then
-        local mx,my = love.mouse.getPosition()
-        self.window_pos.x = mx - self.window_bar.props.gpx
-        self.window_pos.y = my - self.window_bar.props.gpy
-    end
-end
-function hud:draw()
-    self.scene:beginFrame()
-    local wx, wy = self.window_pos.x, self.window_pos.y
-
-    self.window:render(self.window_pos:unpack())
-    self.window_bar:render(wx,wy, self.window_pos.z, bar_height)
-    
-    for _,tool in pairs(hud.tools) do
-        tool:render(wx+tool.props.x, wy+tool.props.y, tools_button_size, tools_button_size)
-    end
-    lg.setColor(1,1,1)
-    hud.palette_label:render(wx+hud.palette_label.props.x, wy+hud.palette_label.props.y, self.window_pos.z, bar_height)
-    local cx, cy = hud.palette_pos[1]+tile_size*4, hud.palette_pos[2]+tile_size*4
-    lg.draw(APP.palette_atlas, wx+cx, wy+cy, 0, tile_size, tile_size, 4,4)
-    for _,color in pairs(hud.palette) do
-        color:render(wx+color.props.x, wy+color.props.y, tile_size, tile_size)
-    end
-    hud.current_color:render(wx+hud.current_color.props.x, wy+hud.current_color.props.y,64,64)
-
-    hud.texture_label:render(wx+hud.texture_label.props.x, wy+hud.texture_label.props.y, self.window_pos.z, bar_height)
-    lg.draw(APP.atlas, wx+self.atlas_pos[1], wy+self.atlas_pos[2])
-    for _,texture in pairs(hud.textures) do
-        texture:render(wx+texture.props.x, wy+texture.props.y, tile_size, tile_size)
-    end
-    hud.current_texture:render(wx+hud.current_texture.props.x, wy+hud.current_texture.props.y,64,64)
-    
-    self.scene:finishFrame()
-    -- lg.print(tostring(self.pointer:doesOverlapElement(self.window)),10,290)
-end
-
-
 
 --------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
--- Mouse state ------------------------------------------------------------------
+-- MOUSE state ------------------------------------------------------------------
 ------------------------------------------------------------------------------
 ---------------------------------------------------------------------------
+
+MOUSE.selected = {
+    pos = vec3(),
+    new = vec3(),
+    id = "",
+}
+
+MOUSE.set_texture = function(self, texture_index)
+    local it = Id_type(texture_index)
+    self[it] = texture_index
+    self.texture_type = it
+    select_model.mesh:setTexture(APP[it == "color" and "palette" or "textures"][texture_index])
+end
 
 local mouse_tools = {
     press = {
         pencil = function(mx,my,mb)
-            if not(mouse.active) then return end
+            if not(MOUSE.active) then return end
             
             if mb==1 then
-                print(mouse.texture_type)
-                Cube_map:add_cube( mouse[mouse.texture_type], {mouse.selected.new:unpack()})
+                print(MOUSE.texture_type)
+                Cube_map:add_cube( MOUSE[MOUSE.texture_type], {MOUSE.selected.new:unpack()})
             elseif mb==2 then
-                if Cube_map:remove_cube(mouse.selected.id) then
-                    mouse.active = false
+                if Cube_map:remove_cube(MOUSE.selected.id) then
+                    MOUSE.active = false
                 end
             end
         end,
         brush = function(mx,my,mb)
-            if not(mouse.active) then return end
+            if not(MOUSE.active) then return end
             
             if mb==1 then
-                Cube_map:paint_cube(mouse.selected.id, {texture = mouse[mouse.texture_type]})
+                Cube_map:paint_cube(MOUSE.selected.id, {texture = MOUSE[MOUSE.texture_type]})
             elseif mb==2 then
-                local cube = Cube_map:get_cube( mouse.selected.id)
+                local cube = Cube_map:get_cube( MOUSE.selected.id)
                 -- print(cube.texture_index)
-                mouse:set_texture(cube.texture_index)
+                MOUSE:set_texture(cube.texture_index)
             end
         end,
     },
@@ -760,7 +416,7 @@ function love.load(...)
     new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     select_model = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
-    mouse:set_texture("color 0:0")
+    MOUSE:set_texture("color 0:0")
     local image_data = love.image.newImageData(8,8)
     -- local x,y = 0,0
     -- for l in io.lines("palette.txt") do
@@ -780,7 +436,7 @@ function love.load(...)
         local color_id = APP.add_color( {x,y}, cor)
         if color_id then
             image_data:setPixel(x,y,unpack(cor))
-            new_color_button(color_id,x,y)
+            hud.new_color_button(color_id,x,y)
             x = x+1
             if x>7 then x=0;y=y+1 end
         end
@@ -788,7 +444,7 @@ function love.load(...)
     APP.palette_atlas = lg.newImage(image_data)
 
     for id,tex in pairs(APP.textures) do
-        new_texture_button(id)
+        hud.new_texture_button(id)
     end
 end
 
@@ -796,7 +452,7 @@ function love.update(dt)
     if APP.first_person_view then
         camera.firstPersonMovement(dt)
     else
-        if mouse.rotating then
+        if MOUSE.rotating then
             cam.theta:update(10,dt)
             cam.phi:update(10,dt)
         end
@@ -820,7 +476,7 @@ function love.draw()
     pivot.model:draw()
     Cube_map:draw()
     -- lg.setColor(1,1,1)
-    if mouse.active and mouse.tool=="pencil" then
+    if MOUSE.active and MOUSE.tool=="pencil" then
         lg.setColor(1,1,1)
         new_text:draw( )
         
@@ -864,7 +520,7 @@ function love.keypressed(k)
             end
         end
         if k=="lalt" and not APP.first_person_view then
-            local key = mouse.tool=="pencil" and "brush" or "pencil"
+            local key = MOUSE.tool=="pencil" and "brush" or "pencil"
             setToolActiveKey(key)
         end
     end
@@ -872,7 +528,7 @@ function love.keypressed(k)
 end
 function love.keyreleased(k)
     if k=="lalt" then
-        local key = mouse.tool=="pencil" and "brush" or "pencil"
+        local key = MOUSE.tool=="pencil" and "brush" or "pencil"
         setToolActiveKey(key)
     end
 end
@@ -881,23 +537,23 @@ function love.mousepressed(mx,my, b)
     if APP.first_person_view then return end
 
     if b==3 then
-        mouse.rotating = true
-        mouse.old_x = mx
-        mouse.old_y = my
-    elseif mouse.active then
-        mouse_tools.press[mouse.tool](mx,my,b)
+        MOUSE.rotating = true
+        MOUSE.old_x = mx
+        MOUSE.old_y = my
+    elseif MOUSE.active then
+        mouse_tools.press[MOUSE.tool](mx,my,b)
     else
         if b==1 then hud.pointer:raise("press") end
     end
 end
 function love.mousereleased(x,y, b)
     if APP.first_person_view then return end
-    if (b == 1) and not(mouse.active) then
+    if (b == 1) and not(MOUSE.active) then
 		hud.pointer:raise("release")
 	end
     if b==3 then
-        mouse.rotating = false
-        love.mouse.setPosition(mouse.old_x, mouse.old_y)
+        MOUSE.rotating = false
+        love.mouse.setPosition(MOUSE.old_x, MOUSE.old_y)
     end
 end
 function love.wheelmoved(x,y)
@@ -910,12 +566,12 @@ function love.mousemoved(mx,my, dx,dy)
     if APP.first_person_view then
         
         camera.firstPersonLook(dx,dy)
-    elseif mouse.rotating then
+    elseif MOUSE.rotating then
         cam.theta = cam.theta + dx*0.5
         cam.phi.t = math.min(89,math.max(-89,cam.phi.t + dy*0.5))
-        mouse.active = false
+        MOUSE.active = false
     elseif hud.pointer:doesOverlapElement(hud.window) then
-        mouse.active = false
+        MOUSE.active = false
     else
 
         local cam = cpml.vec3(unpack(camera.position))
@@ -927,14 +583,14 @@ function love.mousemoved(mx,my, dx,dy)
             Cube_map.cubes[nearest].highlight = true
             local hit_position = vec3(position)
             
-            mouse.active = true
+            MOUSE.active = true
             local nearest_position = vec3(Cube_map.cubes[nearest].translation)
             local result_position = get_side(hit_position, nearest_position)
-            mouse.selected = {pos = hit_position, new = result_position, id = nearest}
+            MOUSE.selected = {pos = hit_position, new = result_position, id = nearest}
             new_text:setTranslation(result_position:unpack())
             select_model:setTranslation(result_position:unpack())
         else
-            mouse.active = false
+            MOUSE.active = false
         end
     end
 

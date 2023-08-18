@@ -22,6 +22,7 @@ local grid_model = g3d.newModel(CUBE, nil, nil,nil, 1.001)
 local change_index = 0
 local undo_list = {}
 local redo_list = {}
+local cube_count = 0
 
 local function add_change(tab)--cmd,index,texture)
     local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
@@ -44,6 +45,7 @@ Scene.clear=function(self, data)
     self.cubes = {}
     self.redo_list = {}
     self.undo_list = {}
+    change_index = 0
     -- self.alpha_ids = {}
     self.palette_ids = {}
     self.palette_count = 1
@@ -57,7 +59,7 @@ Scene.clear=function(self, data)
     -- end
     -- self.palette_ids[id] = true
     self.cubes[id] = g3d.newModel(CUBE, APP.palette["color 0:0"], {0,0,0})
-
+    cube_count = 1
 end
 Scene.load_file=function(self, data)
     --reset all
@@ -113,6 +115,7 @@ Scene.load_file=function(self, data)
         self.cubes[id] = g3d.newModel(CUBE, texture, position)
         self.cubes[id].texture_index = texture_id
     end
+    cube_count = #data.cubes
 end
 local add = function(index, texture_id, position)
     local _,a = From_id(texture_id)
@@ -129,7 +132,7 @@ local add = function(index, texture_id, position)
     -- if(a==7)then Scene.alpha_ids[index] = true end
     Scene.cubes[index] = g3d.newModel(CUBE, APP[material][texture_id], position)
     Scene.cubes[index].texture_index = texture_id
-    
+    cube_count = cube_count+1
     return true
 end
 local remove = function(index)-- there is a bug somewhere around here!
@@ -140,6 +143,7 @@ local remove = function(index)-- there is a bug somewhere around here!
     else
         Scene.texture_count = Scene.texture_count-1
     end
+    cube_count = cube_count-1
     -- if Scene.alpha_ids[index] then Scene.alpha_ids[index] = nil end
     Scene.cubes[index] = nil
 end
@@ -151,6 +155,8 @@ Scene.add_cube = function(self, texture_id, position)
     return add(index, texture_id, position) 
 end
 Scene.remove_cube = function(self, id)
+    if cube_count==1 then return false end
+    print(cube_count)
     local index
     if type(id)=="string" then
         index = id

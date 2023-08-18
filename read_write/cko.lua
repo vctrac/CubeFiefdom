@@ -12,7 +12,7 @@ local function save_cko( data, filename)
         txt = txt ..'\n' .. data.palette_count
         for i,k in pairs(data.palette_ids) do
             local x,z,y = unpack(data.cubes[i].translation)
-            local r,g,b = From_id(data.cubes[i].texture_index)
+            local r,g,b = unpack(APP.colors[data.cubes[i].texture_index])
             local hex = rgb2hex(r,g,b)
             -- print(hex)
             txt = txt .. '\n' .. table.concat({x+100,y+100,z+100,hex}, ' ')
