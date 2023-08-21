@@ -12,19 +12,21 @@
 
 local lg = love.graphics
 local Inky = require"library.inky"
-
-
+local slider = require"ui.slider"
 -- local Button = require"ui.button"
 local tools_button_size = 22
 local bar_height = 14
+local system_bar_height = 25
 local window_height_min = bar_height
 local window_height_max = 620
 local hud = {
     scene   = Inky.scene(),
-    window_pos = cpml.quat(10,10,TILE_SIZE*8+4,window_height_max),
+    window_pos = cpml.quat(10,system_bar_height,TILE_SIZE*8+4,window_height_max),
     tools = { },
+    options = { },
     palette = { },
     textures = { },
+    rgb = { color = {1,1,1} },
     current_texture = nil,
     current_color = nil,
     minimized = false,
@@ -48,7 +50,22 @@ local window = Inky.defineElement(function(self)
     end
 end)
 
-local window_bar = Inky.defineElement(function(self)
+local system_bar = Inky.defineElement(function(self)
+    -- self:onPointer("release", function(self)
+    --     self.props.grab = false
+    -- end)
+    -- self:onPointer("press", function(self)
+    --     -- self.props.grab = true
+    --     local mx,my = love.mouse.getPosition()
+    --     self.props.gpx = mx - hud.window_pos.x
+    --     self.props.gpy = my - hud.window_pos.y
+    -- end)
+    return function(_, x, y, w, h)
+        lg.setColor(0.2,0.2,0.2)
+        lg.rectangle("fill",x,y,w,h)
+    end
+end)
+local grab_bar = Inky.defineElement(function(self)
     self.props.grab = false
     self.props.gpx = 0
     self.props.gpy = 0
@@ -78,15 +95,19 @@ local minimize_button = Inky.defineElement(function(self)
     -- self:onPointer("release", function(self)
     --     self.props.active = not self.props.active
     -- end)
+    self.props.text = "-"
     self:onPointer("press", function(self)
         hud.minimized = not hud.minimized
         hud.window_pos.w = hud.minimized and window_height_min or window_height_max
+        self.props.text = hud.minimized and '+' or '-'
     end)
     return function(_, x, y, w, h)
-        lg.setColor(0.3,0.3,0.7)
+        lg.setColor(0.5,0.5,0.5)
         lg.rectangle("fill",x,y,w,h)
+        lg.setColor(0.3,0.3,0.7)
+        lg.rectangle("fill",x+1,y+1,w-2,h-2)
         lg.setColor(1,1,1)
-        lg.printf("-",x,y,w,"center")
+        lg.printf(self.props.text,x,y-1,w,"center")
     end
 end)
 local label_bar = Inky.defineElement(function(self)
@@ -161,9 +182,9 @@ local function toggle_button_new(name, xx, yy)
             lg.draw(IMAGE[name..self.props.state], x, y)
         end
     end)
-    hud.tools[name] = button(hud.scene)
-    hud.tools[name].props.x = xx
-    hud.tools[name].props.y = yy
+    hud.options[name] = button(hud.scene)
+    hud.options[name].props.x = xx
+    hud.options[name].props.y = yy
 end
 
 local function edit_button_new(name, xx, yy)
@@ -190,11 +211,28 @@ local function edit_button_new(name, xx, yy)
             lg.draw(IMAGE[name], x, y)
         end
     end)
-    hud.tools[name] = button(hud.scene)
-    hud.tools[name].props.x = xx
-    hud.tools[name].props.y = yy
+    hud.options[name] = button(hud.scene)
+    hud.options[name].props.x = xx
+    hud.options[name].props.y = yy
 end
 
+local function set_slider_color()
+    local rgb = APP.colors[MOUSE.color]
+    for v,color in ipairs(hud.rgb) do
+        color.props.progress = rgb[v]
+    end
+end
+local function get_slider_color()
+    local rgb = {}
+    for _,color in ipairs(hud.rgb) do
+        table.insert(rgb, color.props.progress)
+    end
+    -- hud.rgb.color = To_id("color", rgb)
+    -- print(MOUSE.color)
+    local coords = {From_id(MOUSE.color)}
+    -- hud.current_color.props.color = hud.rgb.color
+    APP.replace_color(coords, rgb)
+end
 local function show_color(name,xx,yy)
 
     local button = Inky.defineElement(function(self)
@@ -203,7 +241,7 @@ local function show_color(name,xx,yy)
             lg.setColor(0,0,0,0.5)
             lg.rectangle("fill", x-1,y-1,w+2,h+2)
             lg.setColor(1,1,1)
-            lg.draw(APP.palette[MOUSE.color],x,y,0, w, h)
+            lg.draw(APP.palette[self.props.color],x,y,0, w, h)
         end
     end)
 
@@ -224,6 +262,8 @@ local function new_color_button(name,xx,yy)
         end)
         self:onPointer("release", function(self)
             MOUSE:set_texture(name)
+            hud.current_color.props.color = name
+            set_slider_color()
         end)
         return function(_, x, y, w, h)
             if self.props.active then
@@ -292,21 +332,20 @@ local function show_texture(name,xx,yy)
     hud.current_texture.props.y = yy
 end
 
-
 ----------------------------------------------------------------------------------------------------
---  ######  ########    ###    ########  ######## 
--- ##    ##    ##      ## ##   ##     ##    ##    
--- ##          ##     ##   ##  ##     ##    ##    
---  ######     ##    ##     ## ########     ##    
---       ##    ##    ######### ##   ##      ##    
--- ##    ##    ##    ##     ## ##    ##     ##    
---  ######     ##    ##     ## ##     ##    ##    
+--                                                 ######  ########    ###    ########  ######## 
+--                                                ##    ##    ##      ## ##   ##     ##    ##    
+--                                                ##          ##     ##   ##  ##     ##    ##    
+--                                                 ######     ##    ##     ## ########     ##    
+--                                                      ##    ##    ######### ##   ##      ##    
+--                                                ##    ##    ##    ##     ## ##    ##     ##    
+--                                                 ######     ##    ##     ## ##     ##    ##    
 ----------------------------------------------------------------------------------------------------
 
 hud.pointer = Inky.pointer(hud.scene)
-
+hud.system_bar = system_bar(hud.scene)
 hud.window = window(hud.scene)
-hud.window_bar = window_bar(hud.scene)
+hud.grab_bar = grab_bar(hud.scene)
 hud.minimize_button = minimize_button(hud.scene)
 
 local tx,ty = 2, bar_height
@@ -356,8 +395,21 @@ ty = ty +136
 
 
 show_color(MOUSE.color, 8,ty)
-ty = ty+ 160
+tx = 12
+ty = ty+ 80
 
+for i=1,3 do
+    hud.rgb[i] = slider(hud.scene)
+    hud.rgb[i].props.x = tx
+    hud.rgb[i].props.y = ty
+    hud.rgb[i].props.w = hud.window_pos.z*0.5
+    hud.rgb[i].props.progress = 1
+    hud.rgb[i].props.get_color = get_slider_color
+    ty = ty+14
+end
+
+ty = ty+ 20
+tx = 2
 
 hud.texture_label = label_bar(hud.scene)
 hud.texture_label.props.text = "Texture"
@@ -372,34 +424,63 @@ ty = ty +128
 
 show_texture(MOUSE.texture, 8, ty+8)
 
+----------------------------------------------------------------------------------------------------
+--                                                                       ######## ##    ## ########  
+--                                                                       ##       ###   ## ##     ## 
+--                                                                       ##       ####  ## ##     ## 
+--                                                                       ######   ## ## ## ##     ## 
+--                                                                       ##       ##  #### ##     ## 
+--                                                                       ##       ##   ### ##     ## 
+--                                                                       ######## ##    ## ########  
+----------------------------------------------------------------------------------------------------
+
 function hud:update()
-    if self.window_bar.props.grab then
+    if self.grab_bar.props.grab then
         local mx,my = love.mouse.getPosition()
-        self.window_pos.x = mx - self.window_bar.props.gpx
-        self.window_pos.y = my - self.window_bar.props.gpy
+        self.window_pos.x = mx - self.grab_bar.props.gpx
+        local ny = my - self.grab_bar.props.gpy
+        if ny>system_bar_height then
+            self.window_pos.y = my - self.grab_bar.props.gpy
+        end
     end
 end
 function hud:draw()
     self.scene:beginFrame()
+
+    hud.system_bar:render(0,0,APP.width, system_bar_height)
+
     local wx, wy = self.window_pos.x, self.window_pos.y
 
     self.window:render(self.window_pos:unpack())
-    self.window_bar:render(wx,wy, self.window_pos.z-TILE_SIZE, bar_height)
+    self.grab_bar:render(wx,wy, self.window_pos.z-TILE_SIZE, bar_height)
     self.minimize_button:render(wx+self.window_pos.z-TILE_SIZE,wy,TILE_SIZE, bar_height)
+
     if hud.minimized then return end
+    
     self.tools_label:render(wx+self.tools_label.props.x,wy+self.tools_label.props.y, self.window_pos.z, bar_height)
     
     for _,tool in pairs(self.tools) do
         tool:render(wx+tool.props.x, wy+tool.props.y, tools_button_size, tools_button_size)
     end
+    for _,option in pairs(self.options) do
+        option:render(wx+option.props.x, wy+option.props.y, tools_button_size, tools_button_size)
+    end
+
     lg.setColor(1,1,1)
     self.palette_label:render(wx+self.palette_label.props.x, wy+self.palette_label.props.y, self.window_pos.z, bar_height)
+
     local cx, cy = self.palette_pos[1]+TILE_SIZE*4, self.palette_pos[2]+TILE_SIZE*4
     lg.draw(APP.palette_atlas, wx+cx, wy+cy, 0, TILE_SIZE, TILE_SIZE, 4,4)
+
     for _,color in pairs(self.palette) do
         color:render(wx+color.props.x, wy+color.props.y, TILE_SIZE, TILE_SIZE)
     end
+
     self.current_color:render(wx+self.current_color.props.x, wy+self.current_color.props.y,64,64)
+    for _,color in ipairs(self.rgb) do
+        color:render(wx+color.props.x, wy+color.props.y, color.props.w, bar_height)
+    end
+    -- self.slider:render(wx+self.slider.props.x, wy+self.slider.props.y, self.slider.props.w, bar_height)
 
     self.texture_label:render(wx+self.texture_label.props.x, wy+self.texture_label.props.y, self.window_pos.z, bar_height)
     lg.draw(APP.atlas, wx+self.atlas_pos[1], wy+self.atlas_pos[2])
@@ -411,11 +492,8 @@ function hud:draw()
     self.scene:finishFrame()
     -- lg.print(tostring(self.pointer:doesOverlapElement(self.window)),10,290)
 end
-hud.minimize = function()
 
-
-end
-
+hud.setToolActiveKey = setToolActiveKey
 hud.new_color_button = new_color_button
 hud.new_texture_button = new_texture_button
 return hud

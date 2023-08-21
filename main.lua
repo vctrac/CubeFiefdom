@@ -179,6 +179,8 @@ APP = {
     palette = {},
     colors = {},
     first_person_view = false,
+    width = lg.getWidth(),
+    height = lg.getHeight()
 }
 function APP.load_texture(filename)
     APP.atlas_data = love.image.newImageData("image/"..filename)
@@ -204,7 +206,25 @@ end
 --     return true
 --     -- print(id)
 -- end
+
+local function modify_atlas()
+    local x,y = 0,0
+    local palette = require"palette"
+    local image_data = love.image.newImageData(8,8)
+
+    for i,cor in ipairs(palette) do
+        local id = To_id("color", {x,y})
+        if APP.colors[id] then
+            image_data:setPixel(x,y,unpack(APP.colors[id]))
+            x = x+1
+            if x>7 then x=0;y=y+1 end
+        end
+	end
+    APP.palette_atlas = lg.newImage(image_data)
+end
+
 function APP.add_color(coords, color)
+    -- print(color)
     local id = To_id("color", coords)
     if APP.palette[id] then return false end
 
@@ -214,6 +234,14 @@ function APP.add_color(coords, color)
     APP.colors[id] = color
     return id
 end
+
+function APP.replace_color(coords, color)
+    local id = To_id("color", coords)
+    APP.palette[id] = nil
+    APP.add_color(coords, color)
+    modify_atlas()
+end
+
 -- function APP.load_palette(filename)
 --     local plt = {}--require(filename)
 --     for l in io.lines(filename) do
@@ -264,8 +292,29 @@ local vec3 = cpml.vec3
 local camera = g3d.camera
 local Cube_map = require"scene"
 local hud = require"hud"
-local select_model, use-- = g3d.newSprite("image/use.png",{scale = 0.5})
+local new_cube, current_cube-- = g3d.newSprite("image/use.png",{scale = 0.5})
 
+-- create the mesh for the block cursor
+do
+    local a = -0.005
+    local b = 1.005
+    current_cube = g3d.newModel{
+        {a,a,a}, {b,a,a}, {b,a,a},
+        {a,a,a}, {a,a,b}, {a,a,b},
+        {b,a,b}, {a,a,b}, {a,a,b},
+        {b,a,b}, {b,a,a}, {b,a,a},
+
+        {a,b,a}, {b,b,a}, {b,b,a},
+        {a,b,a}, {a,b,b}, {a,b,b},
+        {b,b,b}, {a,b,b}, {a,b,b},
+        {b,b,b}, {b,b,a}, {b,b,a},
+
+        {a,a,a}, {a,b,a}, {a,b,a},
+        {b,a,a}, {b,b,a}, {b,b,a},
+        {a,a,b}, {a,b,b}, {a,b,b},
+        {b,a,b}, {b,b,b}, {b,b,b},
+    }
+end
 local Key = {
     ctrl = false,
     alt = false
@@ -355,7 +404,7 @@ MOUSE.set_texture = function(self, texture_index)
     local it = Id_type(texture_index)
     self[it] = texture_index
     self.texture_type = it
-    select_model.mesh:setTexture(APP[it == "color" and "palette" or "textures"][texture_index])
+    new_cube.mesh:setTexture(APP[it == "color" and "palette" or "textures"][texture_index])
 end
 
 local mouse_tools = {
@@ -414,7 +463,7 @@ function love.load(...)
     Cube_map:load_file(cko_file.load("example.cko"))
 
     new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
-    select_model = g3d.newModel(CUBE, nil)
+    new_cube = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
     MOUSE:set_texture("color 0:0")
     local image_data = love.image.newImageData(8,8)
@@ -447,8 +496,9 @@ function love.load(...)
         hud.new_texture_button(id)
     end
 end
-
+local ts = 0
 function love.update(dt)
+    ts = ts+dt
     if APP.first_person_view then
         camera.firstPersonMovement(dt)
     else
@@ -476,22 +526,25 @@ function love.draw()
     pivot.model:draw()
     Cube_map:draw()
     -- lg.setColor(1,1,1)
-    if MOUSE.active and MOUSE.tool=="pencil" then
-        lg.setColor(1,1,1)
-        new_text:draw( )
-        
-        lg.setColor(1,1,1,0.6)
-        lg.setMeshCullMode( "back" )
-        select_model:draw( )
-        lg.setMeshCullMode("none")
+    if MOUSE.active then
+        love.graphics.setColor(0,0,0)
+        love.graphics.setWireframe(true)
+        current_cube:draw( )
+        love.graphics.setWireframe(false)
+        if MOUSE.tool=="pencil" then
+            lg.setColor(1,1,1)
+            new_text:draw( )
+            
+            lg.setColor(1,1,1,0.6)
+            lg.setMeshCullMode( "back" )
+            new_cube:draw( )
+            lg.setMeshCullMode("none")
+        end
     end
 
     hud:draw()
 
-    -- local dir, pit = camera.getDirectionPitch()
-    -- local cx,cy,cz = unpack(camera.position)
-    -- lg.print(string.format("d:%0.2f p:%0.2f x:%0.2f y:%0.2f z:%0.2f", dir,pit,cx,cy,cz),15,250)
-    -- lg.print(string.format("theta:%0.2f phi:%0.2f", math.rad(cam.theta.v+90), math.rad(cam.phi.v)),15,270)
+    love.graphics.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
 end
 
 function love.keypressed(k)
@@ -504,7 +557,7 @@ function love.keypressed(k)
         elseif k=='y' then
             Cube_map:redo()
         elseif k=='s' then
-            cko_file.save(Cube_map, "cko_save_"..os.date('%Y%m%d%H%M%S'))
+            cko_file.save(Cube_map, "example")--"cko_save_"..os.date('%Y%m%d%H%M%S'))
         end
     else
         if k=="n" then Cube_map:clear() end
@@ -517,11 +570,12 @@ function love.keypressed(k)
             if APP.first_person_view then
                 local cx,cy,cz = unpack(camera.position)
                 camera.lookInDirection(cx,cy,cz, -math.rad(cam.theta.v+90), -math.rad(cam.phi.v))
+                MOUSE.active = false
             end
         end
         if k=="lalt" and not APP.first_person_view then
             local key = MOUSE.tool=="pencil" and "brush" or "pencil"
-            setToolActiveKey(key)
+            hud.setToolActiveKey(key)
         end
     end
     
@@ -529,7 +583,7 @@ end
 function love.keyreleased(k)
     if k=="lalt" then
         local key = MOUSE.tool=="pencil" and "brush" or "pencil"
-        setToolActiveKey(key)
+        hud.setToolActiveKey(key)
     end
 end
 
@@ -587,8 +641,11 @@ function love.mousemoved(mx,my, dx,dy)
             local nearest_position = vec3(Cube_map.cubes[nearest].translation)
             local result_position = get_side(hit_position, nearest_position)
             MOUSE.selected = {pos = hit_position, new = result_position, id = nearest}
-            new_text:setTranslation(result_position:unpack())
-            select_model:setTranslation(result_position:unpack())
+            local rx,ry,rz = result_position:unpack()
+            new_text:setTranslation(rx,ry,rz)
+            new_cube:setTranslation(rx,ry,rz)
+            rx,ry,rz = nearest_position:unpack()
+            current_cube:setTranslation(rx-0.5,ry-0.5,rz-0.5)
         else
             MOUSE.active = false
         end
@@ -605,4 +662,12 @@ function love.filedropped(file)
 	if ext == ".cko" or ext == ".CKO" then
         Cube_map:load_file(cko_file.load(filename))
     end
+end
+
+function love.resize(w, h)
+    APP.width = w
+    APP.height = h
+    g3d.camera.aspectRatio = lg.getWidth()/lg.getHeight()
+    g3d.camera.updateProjectionMatrix()
+    g3d.camera.updateViewMatrix()
 end

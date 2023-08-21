@@ -16,7 +16,28 @@ local function Image_from_quad(source, x,y,w,h)
     return love.graphics.newImage(nid)
 end
 
-local select_model = g3d.newModel(CUBE, love.graphics.newImage("image/select.png"), nil,nil, 1.01)
+-- local select_model --= g3d.newModel(CUBE, nil, nil,nil, 1.005)
+-- -- create the mesh for the block cursor
+-- do
+--     local a = -0.005
+--     local b = 1.005
+--     select_model = g3d.newModel{
+--         {a,a,a}, {b,a,a}, {b,a,a},
+--         {a,a,a}, {a,a,b}, {a,a,b},
+--         {b,a,b}, {a,a,b}, {a,a,b},
+--         {b,a,b}, {b,a,a}, {b,a,a},
+
+--         {a,b,a}, {b,b,a}, {b,b,a},
+--         {a,b,a}, {a,b,b}, {a,b,b},
+--         {b,b,b}, {a,b,b}, {a,b,b},
+--         {b,b,b}, {b,b,a}, {b,b,a},
+
+--         {a,a,a}, {a,b,a}, {a,b,a},
+--         {b,a,a}, {b,b,a}, {b,b,a},
+--         {a,a,b}, {a,b,b}, {a,b,b},
+--         {b,a,b}, {b,b,b}, {b,b,b},
+--     }
+-- end
 local grid_model = g3d.newModel(CUBE, nil, nil,nil, 1.001)
 -- local data
 local change_index = 0
@@ -29,7 +50,7 @@ local function add_change(tab)--cmd,index,texture)
     redo_list = {}
     change_index = change_index+1
     undo_list[change_index] = string
-    print(string)
+    -- print(string)
 end
 
 local Scene = {
@@ -97,7 +118,7 @@ Scene.load_file=function(self, data)
         if k[5] then
             texture_id = To_id("texture", {k[4],k[5]})
             if not APP.textures[texture_id] then
-                print(texture_id)
+                -- print(texture_id)
                 APP.add_quad(texture_id, k[4], k[5])
             end
             -- if k[5]==7 then
@@ -156,7 +177,7 @@ Scene.add_cube = function(self, texture_id, position)
 end
 Scene.remove_cube = function(self, id)
     if cube_count==1 then return false end
-    print(cube_count)
+    -- print(cube_count)
     local index
     if type(id)=="string" then
         index = id
@@ -257,7 +278,7 @@ Scene.undo = function(self)
     for str in string.gmatch(undo_list[change_index], '([^,]+)') do
         table.insert(op,str)
     end
-    print(undo_list[change_index])
+    -- print(undo_list[change_index])
     if op[1] == "add" then--remove
         remove(op[2])
     elseif op[1] == "remove" then--add
@@ -294,12 +315,17 @@ Scene.draw = function(self)
         if t then-- and not self.alpha_ids[i]then
             k:draw(s)
         end
-        if k.highlight then
-            select_model:setTranslation(unpack(k.translation))
-            select_model:draw(s)
-        end
+        
+        love.graphics.setColor(0,0,0)
+        -- if k.highlight then
+        --     love.graphics.setWireframe(true)
+        --     local kx,ky,kz = unpack(k.translation)
+        --     select_model:setTranslation(kx-0.5,ky-0.5,kz-0.5)
+        --     select_model:draw(s)
+            
+        --     love.graphics.setWireframe(false)
+        -- end
         if g then
-            love.graphics.setColor(0,0,0)
             grid_model:setTranslation(unpack(k.translation))
             love.graphics.setWireframe(true)
             grid_model:draw(s)
