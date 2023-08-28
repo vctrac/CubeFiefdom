@@ -34,12 +34,11 @@ return Inky.defineElement(function(self, scene)
 		progress = math.max(0, progress)
 		progress = math.min(1, progress)
 
-		self.props.progress = progress
+		self.props.progress = math.floor(progress*100)*0.01
 	end
 
 	self:onPointer("press", function(_, pointer)
 		pointer:captureElement(self)
-
 		local pointerX, _ = pointer:getPosition()
 		setProgress(pointerX)
 	end)
@@ -56,11 +55,15 @@ return Inky.defineElement(function(self, scene)
 
 
 	return function(_, x, y, w, h)
+
+		love.graphics.setColor(1,1,1)
+		love.graphics.printf(self.props.progress*100, x+w+8, y, 25, "right")
+
 		do -- Rail
 			local railHeight = h / 4
 			local railY = y + (h - railHeight) / 2
 
-			love.graphics.setColor(0.9, 0.2, 0.9, 1)
+			love.graphics.setColor(self.props.color)
 			love.graphics.rectangle("fill", x, railY, w * self.props.progress, railHeight, 2)
 
 			love.graphics.setColor(0.8, 0.8, 0.8, 1)
@@ -75,5 +78,6 @@ return Inky.defineElement(function(self, scene)
 
 			knob:render(knobX, knobY, knobW, knobH)
 		end
+
 	end
 end)

@@ -228,10 +228,10 @@ local function get_slider_color()
         table.insert(rgb, color.props.progress)
     end
     -- hud.rgb.color = To_id("color", rgb)
-    -- print(MOUSE.color)
-    local coords = {From_id(MOUSE.color)}
+    print(MOUSE.color)
+    local itype, ipos = From_id(MOUSE.color)
     -- hud.current_color.props.color = hud.rgb.color
-    APP.replace_color(coords, rgb)
+    APP.replace_color(ipos, rgb)
 end
 local function show_color(name,xx,yy)
 
@@ -266,10 +266,10 @@ local function new_color_button(name,xx,yy)
             set_slider_color()
         end)
         return function(_, x, y, w, h)
-            if self.props.active then
+            if self.props.active or MOUSE.color==name then
                 lg.setColor(0,0,0,1)
-                local s = TILE_SIZE*1.5
-                local s2 = TILE_SIZE*0.25
+                local s = TILE_SIZE*1.25
+                local s2 = TILE_SIZE*0.125
                 lg.rectangle("fill", x-s2-1,y-s2-1,s+2,s+2)
                 lg.setColor(1,1,1)
                 lg.draw(APP.palette[name],x-s2,y-s2,0,s,s)
@@ -296,22 +296,22 @@ local function new_texture_button(name)
             MOUSE:set_texture(name)
         end)
         return function(_, x, y, w, h)
-            if self.props.active then
-                lg.setColor(0,0,0,0.5)
-                local s = 1.5
-                local sp = TILE_SIZE*0.25
+            if self.props.active or MOUSE.texture==name then
+                lg.setColor(0,0,0,1)
+                local s = 1.25
+                local sp = TILE_SIZE*0.125
                 lg.rectangle("fill", x-sp-1,y-sp-1,w*s+2,h*s+2)
                 lg.setColor(1,1,1)
-                lg.draw(APP.textures[name],x-sp,y-sp,0,s,s)
+                lg.draw(APP.texture[name],x-sp,y-sp,0,s,s)
             end
         end
     end)
     
-    local xx,yy = From_id(name)
+    local itype, ipos = From_id(name)
 
     hud.textures[name] = button(hud.scene)
-    hud.textures[name].props.x = hud.atlas_pos[1]+xx*TILE_SIZE
-    hud.textures[name].props.y = hud.atlas_pos[2]+yy*TILE_SIZE
+    hud.textures[name].props.x = hud.atlas_pos[1]+ipos[1]*TILE_SIZE
+    hud.textures[name].props.y = hud.atlas_pos[2]+ipos[2]*TILE_SIZE
 end
 
 local function show_texture(name,xx,yy)
@@ -322,7 +322,7 @@ local function show_texture(name,xx,yy)
             lg.setColor(0,0,0,0.5)
             lg.rectangle("fill", x-1,y-1,w+2,h+2)
             lg.setColor(1,1,1)
-            lg.draw(APP.textures[MOUSE.texture],x,y,0,4,4)
+            lg.draw(APP.texture[MOUSE.texture],x,y,0,4,4)
         end
     end)
 
@@ -343,6 +343,7 @@ end
 ----------------------------------------------------------------------------------------------------
 
 hud.pointer = Inky.pointer(hud.scene)
+
 hud.system_bar = system_bar(hud.scene)
 hud.window = window(hud.scene)
 hud.grab_bar = grab_bar(hud.scene)
@@ -397,13 +398,18 @@ ty = ty +136
 show_color(MOUSE.color, 8,ty)
 tx = 12
 ty = ty+ 80
-
+local C = {
+    {1,0.2,0.2},
+    {0.2,1,0.2},
+    {0.2,0.2,1},
+}
 for i=1,3 do
     hud.rgb[i] = slider(hud.scene)
     hud.rgb[i].props.x = tx
     hud.rgb[i].props.y = ty
     hud.rgb[i].props.w = hud.window_pos.z*0.5
     hud.rgb[i].props.progress = 1
+    hud.rgb[i].props.color = C[i]
     hud.rgb[i].props.get_color = get_slider_color
     ty = ty+14
 end
@@ -448,16 +454,17 @@ function hud:draw()
     self.scene:beginFrame()
 
     hud.system_bar:render(0,0,APP.width, system_bar_height)
-
+    
+    local width = self.window_pos.z
     local wx, wy = self.window_pos.x, self.window_pos.y
 
     self.window:render(self.window_pos:unpack())
-    self.grab_bar:render(wx,wy, self.window_pos.z-TILE_SIZE, bar_height)
-    self.minimize_button:render(wx+self.window_pos.z-TILE_SIZE,wy,TILE_SIZE, bar_height)
+    self.grab_bar:render(wx,wy, width-TILE_SIZE, bar_height)
+    self.minimize_button:render(wx+width-TILE_SIZE,wy,TILE_SIZE, bar_height)
 
     if hud.minimized then return end
     
-    self.tools_label:render(wx+self.tools_label.props.x,wy+self.tools_label.props.y, self.window_pos.z, bar_height)
+    self.tools_label:render(wx+self.tools_label.props.x,wy+self.tools_label.props.y, width, bar_height)
     
     for _,tool in pairs(self.tools) do
         tool:render(wx+tool.props.x, wy+tool.props.y, tools_button_size, tools_button_size)
@@ -467,7 +474,7 @@ function hud:draw()
     end
 
     lg.setColor(1,1,1)
-    self.palette_label:render(wx+self.palette_label.props.x, wy+self.palette_label.props.y, self.window_pos.z, bar_height)
+    self.palette_label:render(wx+self.palette_label.props.x, wy+self.palette_label.props.y, width, bar_height)
 
     local cx, cy = self.palette_pos[1]+TILE_SIZE*4, self.palette_pos[2]+TILE_SIZE*4
     lg.draw(APP.palette_atlas, wx+cx, wy+cy, 0, TILE_SIZE, TILE_SIZE, 4,4)
@@ -477,20 +484,22 @@ function hud:draw()
     end
 
     self.current_color:render(wx+self.current_color.props.x, wy+self.current_color.props.y,64,64)
+
+    love.graphics.setColor(0.3,0.3,0.3)
+    love.graphics.rectangle("fill", wx+5, wy+self.rgb[1].props.y, width-20, bar_height*3,5)
+
     for _,color in ipairs(self.rgb) do
         color:render(wx+color.props.x, wy+color.props.y, color.props.w, bar_height)
     end
-    -- self.slider:render(wx+self.slider.props.x, wy+self.slider.props.y, self.slider.props.w, bar_height)
 
-    self.texture_label:render(wx+self.texture_label.props.x, wy+self.texture_label.props.y, self.window_pos.z, bar_height)
-    lg.draw(APP.atlas, wx+self.atlas_pos[1], wy+self.atlas_pos[2])
+    self.texture_label:render(wx+self.texture_label.props.x, wy+self.texture_label.props.y, width, bar_height)
+    lg.draw(APP.texture_atlas, wx+self.atlas_pos[1], wy+self.atlas_pos[2])
     for _,texture in pairs(self.textures) do
         texture:render(wx+texture.props.x, wy+texture.props.y, TILE_SIZE, TILE_SIZE)
     end
     self.current_texture:render(wx+self.current_texture.props.x, wy+self.current_texture.props.y,64,64)
     
     self.scene:finishFrame()
-    -- lg.print(tostring(self.pointer:doesOverlapElement(self.window)),10,290)
 end
 
 hud.setToolActiveKey = setToolActiveKey

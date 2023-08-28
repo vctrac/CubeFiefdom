@@ -45,16 +45,23 @@ local function val(vt)
     return t
 end
 ----temp
-local function rc(n,x)
-    local min,max = n or 1, x or 9
-    return math.random(min, max)*0.1, math.random(min, max)*0.1, math.random(min, max)*0.1, 1
-end
-local function rnd_texture()
-    local image1 = love.image.newImageData(16,16)
-    local nr,ng,nb,na = rc(3,8)
-    image1:mapPixel(function(x,y,r,g,b,a) return nr,ng,nb,na end)
-    return lg.newImage(image1)
-end
+-- local function round(num, decimals)
+--     decimals = math.pow(10, decimals or 0)
+--     num = num * decimals
+--     if num >= 0 then num = math.floor(num + 0.5) else num = math.ceil(num - 0.5) end
+--     return num / decimals
+-- end
+
+-- local function rc(n,x)
+--     local min,max = n or 1, x or 9
+--     return math.random(min, max)*0.1, math.random(min, max)*0.1, math.random(min, max)*0.1, 1
+-- end
+-- local function rnd_texture(w,h)
+--     local image1 = love.image.newImageData(w,h or w)
+--     local nr,ng,nb,na = rc(3,8)
+--     image1:mapPixel(function(x,y,r,g,b,a) return nr,ng,nb,na end)
+--     return lg.newImage(image1)
+-- end
 
 --convert a quad from an imageData to a drawable image
 local function Image_from_quad(source, x,y,w,h)
@@ -64,39 +71,23 @@ local function Image_from_quad(source, x,y,w,h)
     return lg.newImage(nid)
 end
 
-function hex2rgb(hex)
-	hex = hex:gsub("ff","",1)
-    local r = tonumber("0x"..hex:sub(1,2))/255
-    local g = tonumber("0x"..hex:sub(3,4))/255
-    local b = tonumber("0x"..hex:sub(5,6))/255
-    -- return tonumber(string.format("%.3f",r)),tonumber(string.format("%.3f",g)),tonumber(string.format("%.3f",b))
-    return math.floor(r*1000)*0.001, math.floor(g*1000)*0.001, math.floor(b*1000)*0.001
-end
-
-function rgb2hex(r,g,b)
-    return string.format("ff%02X%02X%02X",r*255,g*255,b*255)
-end
--- local function hex2rgb(hex, alpha) 
--- 	local redColor,greenColor,blueColor=hex:match('ff?(..)(..)(..)')
--- 	redColor, greenColor, blueColor = tonumber(redColor, 16)/255, tonumber(greenColor, 16)/255, tonumber(blueColor, 16)/255
--- 	redColor, greenColor, blueColor = math.floor(redColor*1000)/1000, math.floor(greenColor*1000)*0.001, math.floor(blueColor*1000)*0.001
--- 	if alpha == nil then
--- 		return redColor, greenColor, blueColor
--- 	end
--- 	return redColor, greenColor, blueColor, alpha
+-- local function hex2rgb(hex)
+-- 	hex = hex:gsub("ff","",1)
+--     local r = tonumber("0x"..hex:sub(1,2))/255
+--     local g = tonumber("0x"..hex:sub(3,4))/255
+--     local b = tonumber("0x"..hex:sub(5,6))/255
+--     -- return tonumber(string.format("%.3f",r)),tonumber(string.format("%.3f",g)),tonumber(string.format("%.3f",b))
+--     -- return math.floor(r*1000)*0.001, math.floor(g*1000)*0.001, math.floor(b*1000)*0.001
+--     return round(r,4), round(g,4), round(b,4)
 -- end
 
--- local hex = "ffda0025"
--- local r,g,b = hex2rgb(hex)
--- local r,g,b = HexToRGB(hex)
--- print("hex:",hex)
--- print("r,g,b:",r,g,b)
--- print("hex2", rgb2hex(r,g,b))
----prints the filename and linenumber of where it was called from
+-- function rgb2hex(r,g,b)
+--     return string.format("ff%02X%02X%02X",r*255,g*255,b*255)
+-- end
+
 local old_print = print
 function print( ...)
-    local info = debug.getinfo(2,"Sl");
-    -- local str  = info.source:match('%w+[^.lua]',2)
+    local info = debug.getinfo(2,"Sl")
     local filename  = info.source:match("(.+)%..+$",2) --removes file extension/ everything after the dot
     old_print(string.format("%s %d >",filename, info.currentline), ...)
 end
@@ -110,19 +101,16 @@ end
 
 function To_id(prefix, coords)
     local id = table.concat(coords,':')
-
     return string.format("%s %s",prefix, id)
-    -- return string.format("%d:%d:%d", unpack(pos))
 end
 function From_id(id)
-    -- print(id)
-    -- local id_type = id:match("(.*) ")
-    local sid = id:match(" (.*)")
+    local id_type = id:match("(.*) ")
+    local coords = id:match(" (.*)")
     local t = {}
-    for num in string.gmatch(sid, '([^:]+)') do
+    for num in string.gmatch(coords, '([^:]+)') do
         table.insert(t,tonumber(num))
     end
-    return unpack(t)--,id_type
+    return id_type, t
 end
 function Id_type(id)
     return id:match("(.*) ")
@@ -138,9 +126,15 @@ end
 --------------------------------------------------------------------------------------
 -- print( love.filesystem.getWorkingDirectory( ))
 
-require 'library.lovefs'
+local nfs = require 'library.nativefs.lovefs'
 cpml = require"library.cpml"
 require"library.g3d"
+
+CONFIG = {
+    version = 0.4,
+    app_name = "Cube Fiefdom",
+    save_name = "save_"..os.date('%Y%m%d%H%M%S') --name defined by user
+}
 
 CUBE = "model/cube.obj" --default cube model, single cube projected texture
 DICE = "model/dice.obj" --alternative cube model, six sides spritesheet texture
@@ -170,12 +164,11 @@ IMAGE.undo_off = IMAGE.undo
 IMAGE.redo_off = IMAGE.redo
 -- 
 
-
 APP = {
     toggle = {light=true, grid=false, texture=true},
     shader = lg.newShader(g3d.shaderpath, "shader/lighting.frag"),
     atlas = nil,
-    textures = {},
+    texture = {},
     palette = {},
     colors = {},
     first_person_view = false,
@@ -184,43 +177,17 @@ APP = {
 }
 function APP.load_texture(filename)
     APP.atlas_data = love.image.newImageData("image/"..filename)
-    APP.atlas = lg.newImage(APP.atlas_data)
-    local iw,ih = APP.atlas:getDimensions()
+    APP.texture_atlas = lg.newImage(APP.atlas_data)
+    local iw,ih = APP.texture_atlas:getDimensions()
     for x=0,math.floor(iw/TILE_SIZE)-1 do
         for y=0,math.floor(ih/TILE_SIZE)-1 do
             local id = To_id("texture", {x,y})
-            APP.textures[id] = Image_from_quad( APP.atlas_data, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
+            APP.texture[id] = Image_from_quad( APP.atlas_data, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
         end
     end
 end
 function APP.add_quad(id, x, y)
-    APP.textures[id] = Image_from_quad( APP.atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
-end
--- function APP.add_color_old(id)
---     if APP.palette[id] then return false end
---     local nr,ng,nb = hex2rgb(id)
---     local image_data = love.image.newImageData(1,1)
---     image_data:setPixel(0,0,nr,ng,nb)
---     -- image_data:mapPixel(function(x,y,r,g,b,a) return nr,ng,nb end)
---     APP.palette[id] = lg.newImage(image_data)
---     return true
---     -- print(id)
--- end
-
-local function modify_atlas()
-    local x,y = 0,0
-    local palette = require"palette"
-    local image_data = love.image.newImageData(8,8)
-
-    for i,cor in ipairs(palette) do
-        local id = To_id("color", {x,y})
-        if APP.colors[id] then
-            image_data:setPixel(x,y,unpack(APP.colors[id]))
-            x = x+1
-            if x>7 then x=0;y=y+1 end
-        end
-	end
-    APP.palette_atlas = lg.newImage(image_data)
+    APP.texture[id] = Image_from_quad( APP.texture_atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
 end
 
 function APP.add_color(coords, color)
@@ -233,13 +200,6 @@ function APP.add_color(coords, color)
     APP.palette[id] = lg.newImage(image_data)
     APP.colors[id] = color
     return id
-end
-
-function APP.replace_color(coords, color)
-    local id = To_id("color", coords)
-    APP.palette[id] = nil
-    APP.add_color(coords, color)
-    modify_atlas()
 end
 
 -- function APP.load_palette(filename)
@@ -269,7 +229,7 @@ end
 -- end
 MOUSE = {
     old_x = 0,
-    old_x = 0,
+    old_y = 0,
     active = false,
     tool = "pencil",
     texture = "texture 0:0",
@@ -287,17 +247,17 @@ MOUSE = {
 -- ########  #######   ######  ##     ## ######## 
 --------------------------------------------------------------------------------------
 
-local vec2 = cpml.vec2
-local vec3 = cpml.vec3
-local camera = g3d.camera
+local save_load = require"io.json"
 local Cube_map = require"scene"
 local hud = require"hud"
-local new_cube, current_cube-- = g3d.newSprite("image/use.png",{scale = 0.5})
+local vec3 = cpml.vec3
+local camera = g3d.camera
+local new_cube, current_cube, new_text-- = g3d.newSprite("image/use.png",{scale = 0.5})
 
 -- create the mesh for the block cursor
 do
-    local a = -0.005
-    local b = 1.005
+    local a = -0.505
+    local b = 0.505
     current_cube = g3d.newModel{
         {a,a,a}, {b,a,a}, {b,a,a},
         {a,a,a}, {a,a,b}, {a,a,b},
@@ -320,9 +280,8 @@ local Key = {
     alt = false
 }
 
----@return vec3:result or false
+---return vec3 result or false
 local function get_side(pos, npos)
-    -- local kp = vec3(Cube_map.cubes[id].translation)
     local dif = (pos-npos)*2
     --converted to string to avoid float point precision problems
     local st = (dif:abs()):to_string_table()
@@ -335,7 +294,7 @@ local function get_side(pos, npos)
     elseif st.z=='1' then
         result.z = sign(dif.z)
     else
-        print("shit happens!")
+        print("some shit happened!")
     end
     if not(result==vec3.zero) then
         return npos+result
@@ -383,11 +342,48 @@ local function pivot_movement(dt)
     end
 end
 
+local function save_atlas()
+    local data = APP.atlas:newImageData()
+    local file_data = data:encode("png")
+    nfs.write(CONFIG.save_name..".png", file_data:getString())
+end
+local function set_atlas()
+    APP.atlas = lg.newCanvas(128,256)
+    APP.atlas:renderTo( function()
+        lg.draw(APP.texture_atlas,0,0)
+        lg.draw(APP.palette_atlas,0,128,0,TILE_SIZE,TILE_SIZE)
+    end)
+end
+local function modify_atlas()
+    local x,y = 0,0
+    local palette = require"palette"
+    local image_data = love.image.newImageData(8,8)
+
+    for i=1,#palette do
+    -- for _,cor in pairs(APP.colors) do
+        local id = To_id("color", {x,y})
+        if APP.colors[id] then
+            image_data:setPixel(x,y,unpack(APP.colors[id]))
+            x = x+1
+            if x>7 then x=0;y=y+1 end
+        end
+	end
+    APP.palette_atlas = lg.newImage(image_data)
+
+    set_atlas()
+end
+
+function APP.replace_color(coords, color)
+    local id = To_id("color", coords)
+    APP.palette[id] = nil
+    APP.add_color(coords, color)
+    modify_atlas()
+    Cube_map:refresh()
+end
 
 APP.cube_map_history = function(name)
     Cube_map[name](Cube_map)
 end
-
 --------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
 -- MOUSE state ------------------------------------------------------------------
@@ -404,7 +400,7 @@ MOUSE.set_texture = function(self, texture_index)
     local it = Id_type(texture_index)
     self[it] = texture_index
     self.texture_type = it
-    new_cube.mesh:setTexture(APP[it == "color" and "palette" or "textures"][texture_index])
+    new_cube.mesh:setTexture(APP[it == "color" and "palette" or "texture"][texture_index])
 end
 
 local mouse_tools = {
@@ -453,34 +449,23 @@ local mouse_tools = {
 -- ##     ## ##     ##  ##  ##   ### 
 -- ##     ## ##     ## #### ##    ## 
 --------------------------------------------------------------------------------------
-local cko_file = require"read_write.cko"
+
 
 function love.load(...)
-    -- love.mouse.setRelativeMode(true)
+
     lg.setBackgroundColor(0.502,0.502,1)
-    -- lg.setMeshCullMode( "back" )
-    -- APP.add_color("ff999999")
-    Cube_map:load_file(cko_file.load("example.cko"))
+
+    APP.load_texture("tex.png")
+    Cube_map:new()
 
     new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     new_cube = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
     MOUSE:set_texture("color 0:0")
     local image_data = love.image.newImageData(8,8)
-    -- local x,y = 0,0
-    -- for l in io.lines("palette.txt") do
-    --     local r,g,b = hex2rgb(l)
-    --     local color_id = APP.add_color( r,g,b)
-    --     if color_id then
-    --         image_data:setPixel(x,y,r,g,b)
-    --         new_color_button(color_id,x,y)
-    --         x = x+1
-    --         if x>7 then x=0;y=y+1 end
-    --     end
-	-- end
     local x,y = 0,0
     local palette = require"palette"
-    for i,cor in ipairs(palette) do
+    for _,cor in ipairs(palette) do
         -- local r,g,b = unpack(cor)
         local color_id = APP.add_color( {x,y}, cor)
         if color_id then
@@ -492,13 +477,14 @@ function love.load(...)
 	end
     APP.palette_atlas = lg.newImage(image_data)
 
-    for id,tex in pairs(APP.textures) do
+    for id,_ in pairs(APP.texture) do
         hud.new_texture_button(id)
     end
+    set_atlas()
+    Cube_map:refresh()
 end
-local ts = 0
+
 function love.update(dt)
-    ts = ts+dt
     if APP.first_person_view then
         camera.firstPersonMovement(dt)
     else
@@ -541,9 +527,11 @@ function love.draw()
             lg.setMeshCullMode("none")
         end
     end
+    if not APP.first_person_view then
+        hud:draw()
+    end
 
-    hud:draw()
-
+    -- lg.setColor(1,1,1,1)
     love.graphics.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
 end
 
@@ -557,7 +545,9 @@ function love.keypressed(k)
         elseif k=='y' then
             Cube_map:redo()
         elseif k=='s' then
-            cko_file.save(Cube_map, "example")--"cko_save_"..os.date('%Y%m%d%H%M%S'))
+            save_load.save(Cube_map, CONFIG.save_name)--"save_"..os.date('%Y%m%d%H%M%S'))
+
+            -- save_atlas()
         end
     else
         if k=="n" then Cube_map:clear() end
@@ -618,7 +608,6 @@ function love.wheelmoved(x,y)
 end
 function love.mousemoved(mx,my, dx,dy)
     if APP.first_person_view then
-        
         camera.firstPersonLook(dx,dy)
     elseif MOUSE.rotating then
         cam.theta = cam.theta + dx*0.5
@@ -626,6 +615,10 @@ function love.mousemoved(mx,my, dx,dy)
         MOUSE.active = false
     elseif hud.pointer:doesOverlapElement(hud.window) then
         MOUSE.active = false
+        if (love.mouse.isDown(1)) then
+            hud.pointer:setPosition(mx, my)
+            hud.pointer:raise("drag", dx, dy)
+        end
     else
 
         local cam = cpml.vec3(unpack(camera.position))
@@ -634,18 +627,19 @@ function love.mousemoved(mx,my, dx,dy)
         local nearest, position = Cube_map:cast_ray(cam.x, cam.y, cam.z, ray.x, ray.y, ray.z)
         
         if nearest then
+            -- print(nearest, unpack(position))
             Cube_map.cubes[nearest].highlight = true
             local hit_position = vec3(position)
             
             MOUSE.active = true
-            local nearest_position = vec3(Cube_map.cubes[nearest].translation)
+            local nearest_position = vec3(Cube_map.cubes[nearest].position)
             local result_position = get_side(hit_position, nearest_position)
             MOUSE.selected = {pos = hit_position, new = result_position, id = nearest}
             local rx,ry,rz = result_position:unpack()
             new_text:setTranslation(rx,ry,rz)
             new_cube:setTranslation(rx,ry,rz)
             rx,ry,rz = nearest_position:unpack()
-            current_cube:setTranslation(rx-0.5,ry-0.5,rz-0.5)
+            current_cube:setTranslation(rx,ry,rz)
         else
             MOUSE.active = false
         end
@@ -659,15 +653,14 @@ function love.filedropped(file)
     filename = file:getFilename()
 	ext = filename:match("%.%w+$")
 
-	if ext == ".cko" or ext == ".CKO" then
-        Cube_map:load_file(cko_file.load(filename))
+	if ext == ".json" or ext == ".JSON" then
+        Cube_map:load_file(save_load.load(filename))
     end
 end
 
 function love.resize(w, h)
     APP.width = w
     APP.height = h
-    g3d.camera.aspectRatio = lg.getWidth()/lg.getHeight()
+    g3d.camera.aspectRatio = w / h
     g3d.camera.updateProjectionMatrix()
-    g3d.camera.updateViewMatrix()
 end

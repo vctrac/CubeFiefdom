@@ -58,7 +58,7 @@ local function newModel(verts, texture, translation, rotation, scale)
     self.matrix = newMatrix()
     if type(scale) == "number" then scale = {scale, scale, scale} end
     self:setTransform(translation or {0,0,0}, rotation or {0,0,0}, scale or {1,1,1})
-    self:generateAABB()
+    -- self:generateAABB()
 
     return self
 end
