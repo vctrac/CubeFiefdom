@@ -230,6 +230,8 @@ end
 MOUSE = {
     old_x = 0,
     old_y = 0,
+    move_x = 0,
+    move_y = 0,
     active = false,
     tool = "pencil",
     texture = "texture 0:0",
@@ -278,7 +280,8 @@ do
 end
 local Key = {
     ctrl = false,
-    alt = false
+    alt = false,
+    shift = false
 }
 
 ---return vec3 result or false
@@ -314,30 +317,32 @@ local ZOOM_MIN = 0.5
 
 local pivot = {
     x=0, y=0, z=0,
-    speed = 5,
+    speed = 10,
     angle = 0,
     model = nil
 }
 local function pivot_movement(dt)
-    local moveX, moveY = 0,0
-    if love.keyboard.isDown "a" then moveX = moveX - 1 end
-    if love.keyboard.isDown "w" then moveY = moveY - 1 end
-    if love.keyboard.isDown "d" then moveX = moveX + 1 end
-    if love.keyboard.isDown "s" then moveY = moveY + 1 end
-    if love.keyboard.isDown "space" then
-        pivot.z = pivot.z - pivot.speed*dt
-        pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
-    end
-    if love.keyboard.isDown "c" then
-        pivot.z = pivot.z + pivot.speed*dt
-        pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
-    end
+    local moveX, moveY = MOUSE.move_x, MOUSE.move_y
+    -- if love.keyboard.isDown "a" then moveX = moveX - 1 end
+    -- if love.keyboard.isDown "w" then moveY = moveY - 1 end
+    -- if love.keyboard.isDown "d" then moveX = moveX + 1 end
+    -- if love.keyboard.isDown "s" then moveY = moveY + 1 end
+    -- if love.keyboard.isDown "space" then
+    --     pivot.z = pivot.z - pivot.speed*dt
+    --     pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
+    -- end
+    -- if love.keyboard.isDown "c" then
+    --     pivot.z = pivot.z + pivot.speed*dt
+    --     pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
+    -- end
 
     if moveX ~= 0 or moveY ~= 0 then
-        local angle = math.atan2(moveY, moveX)
+        local angle = math.atan2(0, moveX)
         local dir = math.rad(cam.theta()) + angle
         pivot.x = pivot.x + math.cos(dir) * pivot.speed * dt
         pivot.y = pivot.y - math.sin(dir) * pivot.speed * dt
+        
+        -- pivot.z = pivot.z + moveY*pivot.speed * dt
 
         pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
     end
@@ -486,6 +491,10 @@ function love.load(...)
 end
 
 function love.update(dt)
+    if MOUSE.stopped then
+        MOUSE.move_x = 0
+        MOUSE.move_y = 0
+    end
     if APP.first_person_view then
         camera.firstPersonMovement(dt)
     else
@@ -495,7 +504,9 @@ function love.update(dt)
         end
         
         cam.offset:update(5,dt)
-        pivot_movement(dt)
+        if MOUSE.panning then
+            pivot_movement(dt)
+        end
         camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta.v), math.rad(cam.phi.v), cam.offset.v)
     end
     if APP.toggle.light then
@@ -503,8 +514,10 @@ function love.update(dt)
     end
     Key.ctrl = love.keyboard.isDown("lctrl")
     Key.alt = love.keyboard.isDown("lalt")
+    Key.shift = love.keyboard.isDown("lshift")
 
     hud:update()
+    MOUSE.stopped = true
 end
 
 function love.draw()
@@ -531,7 +544,7 @@ function love.draw()
     if not APP.first_person_view then
         hud:draw()
     end
-
+    
     -- lg.setColor(1,1,1,1)
     love.graphics.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
 end
@@ -542,6 +555,7 @@ function love.keypressed(k)
     end
     if k=="f1" then
         save_obj.save(Cube_map, CONFIG.save_name)
+        save_atlas()
     end
     if Key.ctrl then
         if k=='z' then
@@ -551,7 +565,7 @@ function love.keypressed(k)
         elseif k=='s' then
             save_load.save(Cube_map, CONFIG.save_name)--"save_"..os.date('%Y%m%d%H%M%S'))
 
-            save_atlas()
+            -- save_atlas()
         end
     else
         if k=="n" then Cube_map:clear() end
@@ -585,7 +599,11 @@ function love.mousepressed(mx,my, b)
     if APP.first_person_view then return end
 
     if b==3 then
-        MOUSE.rotating = true
+        if Key.shift then
+            MOUSE.panning = true
+        else
+            MOUSE.rotating = true
+        end
         MOUSE.old_x = mx
         MOUSE.old_y = my
     elseif MOUSE.active then
@@ -601,7 +619,8 @@ function love.mousereleased(x,y, b)
 	end
     if b==3 then
         MOUSE.rotating = false
-        love.mouse.setPosition(MOUSE.old_x, MOUSE.old_y)
+        MOUSE.panning = false
+        -- love.mouse.setPosition(MOUSE.old_x, MOUSE.old_y)
     end
 end
 function love.wheelmoved(x,y)
@@ -611,11 +630,16 @@ function love.wheelmoved(x,y)
     end
 end
 function love.mousemoved(mx,my, dx,dy)
+    MOUSE.stopped = false
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
     elseif MOUSE.rotating then
         cam.theta = cam.theta + dx*0.5
         cam.phi.t = math.min(89,math.max(-89,cam.phi.t + dy*0.5))
+        MOUSE.active = false
+    elseif MOUSE.panning then
+        MOUSE.move_x = dx
+        MOUSE.move_y = dy
         MOUSE.active = false
     elseif hud.pointer:doesOverlapElement(hud.window) then
         MOUSE.active = false

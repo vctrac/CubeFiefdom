@@ -239,7 +239,7 @@ Scene.remove_cube = function(self, id)
         return false
     end
 
-    local texture_id = ""..tostring(self.cubes[index].texture_index)
+    local texture_id = tostring(self.cubes[index].texture_index)
     add_change({"remove",index,texture_id})
     remove(index)
     
@@ -293,7 +293,7 @@ Scene.redo = function(self)
     if op[1] == "remove" then--remove
         remove(op[2])
     elseif op[1] == "add" then--add
-        local itype, ipos = From_id(op[2])
+        local _, ipos = From_id(op[2])
         add(op[2], op[3], ipos)
     elseif op[1] == "paint" then--paint
         paint(op[2], op[3])
