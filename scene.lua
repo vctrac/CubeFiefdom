@@ -47,7 +47,7 @@ local change_index = 0
 local undo_list = {}
 local redo_list = {}
 local cube_count = 0
-local model
+-- local model
 
 local function add_change(tab)--{cmd,index,texture}
     local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
@@ -58,6 +58,7 @@ end
 
 local Scene = {
     cubes = {},
+    model = nil,
     -- alpha_ids = {},
     palette_count = 0,
     texture_count = 0,
@@ -106,8 +107,20 @@ local function remesh()
         if not Scene:get_cube( {x,y,z+1}) then addFace(x,y,z+1, 1,2,0, u,v, true) end --top
 
     end
-    model = g3d.newModel(verts, APP.atlas, {-0.5,-0.5,-0.5})
-    model:makeNormals()
+    Scene.model = g3d.newModel(verts, APP.atlas, {-0.5,-0.5,-0.5})
+    Scene.model:makeNormals()
+    -- print(#Scene.model.verts/3)
+    -- local f = io.open("obj.txt", 'w')
+    -- for _,m in ipairs(Scene.model.verts) do
+    --     print(table.concat(m, ', '))
+    -- end
+        -- f:write(table.concat(m)..'\n')
+        -- m[1] = m[1]-0.5
+        -- m[2] = m[2]-0.5
+        -- m[3] = m[3]-0)
+    -- f:write(table.concat(Scene.model.verts))
+    -- f:close()
+
 end
 local add = function(index, texture_id, position)
     local itype, ipos = From_id(texture_id)
@@ -342,13 +355,13 @@ Scene.draw = function(self)
     if g then
         love.graphics.setColor(0,0,0)
         love.graphics.setWireframe(true)
-        model:draw( )
+        Scene.model:draw( )
         love.graphics.setWireframe(false)
     end
     -- end
     if t then
         love.graphics.setColor(1,1,1)
-        model:draw(s )
+        Scene.model:draw(s )
     end
     -- for i,k in pairs(self.alpha_ids) do
     --     love.graphics.setColor(1,1,1)

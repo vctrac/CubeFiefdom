@@ -133,7 +133,7 @@ require"library.g3d"
 CONFIG = {
     version = 0.4,
     app_name = "Cube Fiefdom",
-    save_name = "save_"..os.date('%Y%m%d%H%M%S') --name defined by user
+    save_name = "save_"--..os.date('%Y%m%d%H%M%S') --name defined by user
 }
 
 CUBE = "model/cube.obj" --default cube model, single cube projected texture
@@ -247,6 +247,7 @@ MOUSE = {
 -- ########  #######   ######  ##     ## ######## 
 --------------------------------------------------------------------------------------
 
+local save_obj = require"io.obj"
 local save_load = require"io.json"
 local Cube_map = require"scene"
 local hud = require"hud"
@@ -539,6 +540,9 @@ function love.keypressed(k)
     if k=="escape" then
         love.event.quit()
     end
+    if k=="f1" then
+        save_obj.save(Cube_map, CONFIG.save_name)
+    end
     if Key.ctrl then
         if k=='z' then
             Cube_map:undo()
@@ -547,7 +551,7 @@ function love.keypressed(k)
         elseif k=='s' then
             save_load.save(Cube_map, CONFIG.save_name)--"save_"..os.date('%Y%m%d%H%M%S'))
 
-            -- save_atlas()
+            save_atlas()
         end
     else
         if k=="n" then Cube_map:clear() end
