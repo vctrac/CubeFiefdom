@@ -2,10 +2,9 @@ local format = string.format
 local abs = math.abs
 local function save_obj(data, name, flip)
 
-    local txt = "#cubeFiefdom"
-    txt = txt .."\nmtllib "..name..".mtl"
+    local txt = "mtllib "..name..".mtl"
     txt = txt .."\no "..name
-    
+
     --remove duplicates
     local vertex = {}
     local texture = {}
@@ -35,11 +34,11 @@ local function save_obj(data, name, flip)
             texture[id]= #vt
         end
         local ft = texture[id]
-        
+
         x = m[6]==0 and 0 or m[6]
         y = m[7]==0 and 0 or m[7]
         z = m[8]==0 and 0 or m[8]
-        id = format("%.6f,%.6f,%.6f",x,y,z)
+        id = format("%.4f,%.4f,%.4f",x,y,z)
         if not normal[id] then
             vn[#vn+1] = {x,y,z}
             normal[id] = #vn
@@ -64,9 +63,18 @@ local function save_obj(data, name, flip)
     for i=1,#f,3 do
         txt = txt .."\nf " .. f[i].. " ".. f[i+1].. " ".. f[i+2]
     end
-    
+
     local obj = io.open(name ..".obj", "w")
-    assert(obj,"could not open file")
+    -- assert(obj,"could not open " ..name..".obj file")
+    if not obj then
+        return false, "could not open " ..name..".obj file"
+    end
+    obj:write("#########################################\n")
+    obj:write("# Wavefront .obj file\n")
+    obj:write("# Created by: Cube Fiefdom (v "..CONFIG.version..")\n")
+    obj:write("# Date: "..os.date().."\n")
+    obj:write("#########################################\n\n")
+
     obj:write(txt)
     obj:close()
 
@@ -81,9 +89,13 @@ local function save_obj(data, name, flip)
     txt = txt .. "\nmap_Kd "..name..".png"
 
     local mtl = io.open(name ..".mtl", "w")
-    assert(mtl,"could not open file")
+    -- assert(mtl,"could not open "..name ..".mtl file")
+    if not mtl then
+        return false, "could not open " ..name..".mtl file"
+    end
     mtl:write(txt)
     mtl:close()
+    return true
 end
 
 return {save = save_obj}

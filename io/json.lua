@@ -1,5 +1,5 @@
 
-json = require "library.json"
+local json = require "library.json"
 
 local function save_json( data, filename)
     local save = io.open(filename ..".json", 'w')
@@ -20,11 +20,11 @@ local function save_json( data, filename)
     save:close()
 end
 
-local function parse_json(filename)
+local function load_json(filename)
     local f = io.open(filename, 'r')
     local string = f:read("*all")
     
     return json.decode(string)
 end
 
-return {load = parse_json, save = save_json}
+return {load = load_json, save = save_json}

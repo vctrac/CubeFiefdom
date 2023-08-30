@@ -126,18 +126,18 @@ end
 --------------------------------------------------------------------------------------
 -- print( love.filesystem.getWorkingDirectory( ))
 
-local nfs = require 'library.nativefs.lovefs'
+
 cpml = require"library.cpml"
 require"library.g3d"
 
 CONFIG = {
-    version = 0.4,
+    version = "0.4",
     app_name = "Cube Fiefdom",
     save_name = "save_"--..os.date('%Y%m%d%H%M%S') --name defined by user
 }
 
 CUBE = "model/cube.obj" --default cube model, single cube projected texture
-DICE = "model/dice.obj" --alternative cube model, six sides spritesheet texture
+-- DICE = "model/dice.obj" --alternative cube model, six sides spritesheet texture
 TILE_SIZE = 16
 
 lg.setDefaultFilter("nearest", "nearest")
@@ -157,6 +157,7 @@ IMAGE = {
     texture_on = lg.newImage("image/texture.png"),
     redo = lg.newImage("image/redo.png"),
     undo = lg.newImage("image/undo.png"),
+    skysphere = lg.newImage("image/skysphere.png"),
 }
 IMAGE.grid_off = IMAGE.grid_on
 IMAGE.texture_off = IMAGE.texture_on
@@ -249,13 +250,15 @@ MOUSE = {
 -- ########  #######   ######  ##     ## ######## 
 --------------------------------------------------------------------------------------
 
-local save_obj = require"io.obj"
-local save_load = require"io.json"
+-- local save_obj = require"io.obj"
+
+
 local Cube_map = require"scene"
 local hud = require"hud"
 local vec3 = cpml.vec3
 local camera = g3d.camera
-local new_cube, current_cube, new_text-- = g3d.newSprite("image/use.png",{scale = 0.5})
+local new_cube, current_cube, new_text
+local sky
 
 -- create the mesh for the block cursor
 do
@@ -283,6 +286,21 @@ local Key = {
     alt = false,
     shift = false
 }
+
+local save_load = {
+    json = require"io.json",
+    lua = require"io.lua",
+    obj = require"io.obj",
+    accepted_format = {json=1, lua=1, obj=1}
+}
+save_load.save = function(format, data, name, ...)
+    assert(save_load[format],"wrong format: "..format)
+    return save_load[format].save(data, name,...)
+end
+save_load.load = function(format, name, ...)
+    assert(save_load[format],"wrong format: "..format)
+    return save_load[format].load(name, ...)
+end
 
 ---return vec3 result or false
 local function get_side(pos, npos)
@@ -322,37 +340,45 @@ local pivot = {
     model = nil
 }
 local function pivot_movement(dt)
-    local moveX, moveY = MOUSE.move_x, MOUSE.move_y
-    -- if love.keyboard.isDown "a" then moveX = moveX - 1 end
-    -- if love.keyboard.isDown "w" then moveY = moveY - 1 end
-    -- if love.keyboard.isDown "d" then moveX = moveX + 1 end
-    -- if love.keyboard.isDown "s" then moveY = moveY + 1 end
-    -- if love.keyboard.isDown "space" then
-    --     pivot.z = pivot.z - pivot.speed*dt
-    --     pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
-    -- end
-    -- if love.keyboard.isDown "c" then
-    --     pivot.z = pivot.z + pivot.speed*dt
-    --     pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
-    -- end
+    local moveX, moveY = 0,0--MOUSE.move_x, MOUSE.move_y
+    local moved = false
+    if love.keyboard.isDown "d" then moveX = moveX - 1 end
+    if love.keyboard.isDown "s" then moveY = moveY - 1 end
+    if love.keyboard.isDown "a" then moveX = moveX + 1 end
+    if love.keyboard.isDown "w" then moveY = moveY + 1 end
+    if love.keyboard.isDown "c" then
+        pivot.z = pivot.z - pivot.speed*dt
+        moved = true
+    end
+    if love.keyboard.isDown "space" then
+        pivot.z = pivot.z + pivot.speed*dt
+        moved = true
+    end
 
     if moveX ~= 0 or moveY ~= 0 then
-        local angle = math.atan2(0, moveX)
+        local angle = math.atan2(moveY, moveX)
         local dir = math.rad(cam.theta()) + angle
         pivot.x = pivot.x + math.cos(dir) * pivot.speed * dt
         pivot.y = pivot.y - math.sin(dir) * pivot.speed * dt
-        
-        -- pivot.z = pivot.z + moveY*pivot.speed * dt
 
+        moved = true
+    end
+
+    if moved then
         pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
+        sky:setTranslation(pivot.x,pivot.y,pivot.z)
     end
 end
 
-local function save_atlas()
-    local data = APP.atlas:newImageData()
-    local file_data = data:encode("png")
-    nfs.write(CONFIG.save_name..".png", file_data:getString())
-end
+-- ---@TODO function to load textures
+-- local function load_atlas(filename)
+--     --body
+-- end
+-- local function save_atlas()
+--     local data = APP.atlas:newImageData()
+--     local file_data = data:encode("png")
+--     nfs.write(CONFIG.save_name..".png", file_data:getString())
+-- end
 local function set_atlas()
     APP.atlas = lg.newCanvas(128,256)
     APP.atlas:renderTo( function()
@@ -459,10 +485,12 @@ local mouse_tools = {
 
 function love.load(...)
 
-    lg.setBackgroundColor(0.502,0.502,1)
+    -- lg.setBackgroundColor(0.502,0.502,1)
 
     APP.load_texture("tex.png")
     Cube_map:new()
+
+    sky = g3d.newModel("model/dome.obj", IMAGE.skysphere, nil, nil, 500)
 
     new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     new_cube = g3d.newModel(CUBE, nil)
@@ -504,9 +532,9 @@ function love.update(dt)
         end
         
         cam.offset:update(5,dt)
-        if MOUSE.panning then
+        -- if MOUSE.panning then
             pivot_movement(dt)
-        end
+        -- end
         camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta.v), math.rad(cam.phi.v), cam.offset.v)
     end
     if APP.toggle.light then
@@ -523,6 +551,7 @@ end
 function love.draw()
     -- local s = APP.toggle.light and APP.shader
     -- lg.setDepthMode("lequal", false)
+    sky:draw()
     pivot.model:draw()
     Cube_map:draw()
     -- lg.setColor(1,1,1)
@@ -554,8 +583,8 @@ function love.keypressed(k)
         love.event.quit()
     end
     if k=="f1" then
-        save_obj.save(Cube_map, CONFIG.save_name)
-        save_atlas()
+        save_load.obj.save(Cube_map, CONFIG.save_name)
+        -- save_atlas()
     end
     if Key.ctrl then
         if k=='z' then
@@ -563,7 +592,7 @@ function love.keypressed(k)
         elseif k=='y' then
             Cube_map:redo()
         elseif k=='s' then
-            save_load.save(Cube_map, CONFIG.save_name)--"save_"..os.date('%Y%m%d%H%M%S'))
+            save_load.save("lua", Cube_map, CONFIG.save_name)
 
             -- save_atlas()
         end
@@ -674,15 +703,18 @@ function love.mousemoved(mx,my, dx,dy)
     end
 
     hud.pointer:setPosition(mx, my)
-    
 end
 
 function love.filedropped(file)
-    filename = file:getFilename()
-	ext = filename:match("%.%w+$")
+    local filename = file:getFilename()
+    if not filename then
+        return
+    end
+	local ext = string.lower( string.sub( filename:match("%.%w+$"),2))
 
-	if ext == ".json" or ext == ".JSON" then
-        Cube_map:load_file(save_load.load(filename))
+	if save_load.accepted_format[ext] then
+        if ext=="obj" then return end
+        Cube_map:load_file(save_load.load(ext, filename))
     end
 end
 
