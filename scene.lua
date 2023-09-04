@@ -73,7 +73,7 @@ local function remesh()
         for i=1, 6 do
             local df = 0.001 --this variable here prevents texture bleeding
             local pu = 1/8 - df
-            local pv = 1/16 - df
+            -- local pv = 1/8 - df
             local primary = i%2 == (flip and 0 or 1)
             local secondary = i > 2 and i < 6
             verts[index] = {}
@@ -81,7 +81,7 @@ local function remesh()
             verts[index][2]  = y + (my == 1 and primary and 1 or 0) + (my == 2 and secondary and 1 or 0)
             verts[index][3]  = z + (mz == 1 and primary and 1 or 0) + (mz == 2 and secondary and 1 or 0)
             verts[index][4]  = u + (primary   and pu or df)
-            verts[index][5]  = v + (secondary and df or pv)
+            verts[index][5]  = v + (secondary and df or pu)
             verts[index][6]  = 0
             verts[index][7]  = 0
             verts[index][8]  = 1
@@ -97,7 +97,7 @@ local function remesh()
         local x,y,z = cube.position[1], cube.position[2], cube.position[3]
         local u,v = unpack(cube.uv)
         u = u/8
-        v = v/16
+        v = v/8
         if not Scene:get_cube( {x-1,y,z}) then addFace(x,y,z,   0,1,2, u,v) end --front
         if not Scene:get_cube( {x,y+1,z}) then addFace(x,y+1,z, 1,0,2, u,v) end --left
         if not Scene:get_cube( {x,y,z-1}) then addFace(x,y,z,   1,2,0, u,v) end --botton
@@ -109,17 +109,6 @@ local function remesh()
     end
     Scene.model = g3d.newModel(verts, APP.atlas, {-0.5,-0.5,-0.5})
     Scene.model:makeNormals()
-    -- print(#Scene.model.verts/3)
-    -- local f = io.open("obj.txt", 'w')
-    -- for _,m in ipairs(Scene.model.verts) do
-    --     print(table.concat(m, ', '))
-    -- end
-        -- f:write(table.concat(m)..'\n')
-        -- m[1] = m[1]-0.5
-        -- m[2] = m[2]-0.5
-        -- m[3] = m[3]-0)
-    -- f:write(table.concat(Scene.model.verts))
-    -- f:close()
 
 end
 local add = function(index, texture_id, position)
@@ -189,7 +178,7 @@ end
 Scene.new=function(self)
     self:clear()
     local id = "translation 0:0:0"
-    local texture_id = "color 0:0"
+    local texture_id = "texture 0:0"
 
     add(id, texture_id, {0,0,0})
     remesh()
@@ -352,6 +341,11 @@ Scene.draw = function(self)
         -- end
         
         -- love.graphics.setColor(0,0,0)
+    if t then
+        love.graphics.setColor(1,1,1)
+        Scene.model:draw(s)
+    end
+
     if g then
         love.graphics.setColor(0,0,0)
         love.graphics.setWireframe(true)
@@ -359,10 +353,7 @@ Scene.draw = function(self)
         love.graphics.setWireframe(false)
     end
     -- end
-    if t then
-        love.graphics.setColor(1,1,1)
-        Scene.model:draw(s )
-    end
+    
     -- for i,k in pairs(self.alpha_ids) do
     --     love.graphics.setColor(1,1,1)
     --     self.cubes[i]:draw( )

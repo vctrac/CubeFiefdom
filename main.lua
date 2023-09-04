@@ -146,17 +146,21 @@ IMAGE = {
     atlas = lg.newImage("image/tex.png"),
     circle = lg.newImage("image/circle.png"),
     center = lg.newImage("image/center.png"),
-    new_text = lg.newImage("image/new_text.png"),
-    button_frame = lg.newImage("image/button_frame.png"),
-    pencil = lg.newImage("image/pencil.png"),
-    brush = lg.newImage("image/brush.png"),
-    rotate = lg.newImage("image/rotate.png"),
-    light_on = lg.newImage("image/light.png"),
-    light_off = lg.newImage("image/light_off.png"),
-    grid_on = lg.newImage("image/grid.png"),
-    texture_on = lg.newImage("image/texture.png"),
-    redo = lg.newImage("image/redo.png"),
-    undo = lg.newImage("image/undo.png"),
+    -- new_text = lg.newImage("image/new_text.png"),
+    button_frame = lg.newImage("image/buttons/button_frame.png"),
+    pencil = lg.newImage("image/buttons/pencil.png"),
+    brush = lg.newImage("image/buttons/brush.png"),
+    rotate = lg.newImage("image/buttons/rotate.png"),
+    light_on = lg.newImage("image/buttons/light.png"),
+    light_off = lg.newImage("image/buttons/light_off.png"),
+    grid_on = lg.newImage("image/buttons/grid.png"),
+    texture_on = lg.newImage("image/buttons/texture.png"),
+    redo = lg.newImage("image/buttons/redo.png"),
+    undo = lg.newImage("image/buttons/undo.png"),
+    tools_on = lg.newImage("image/tabs/tools_on.png"),
+    tools_off = lg.newImage("image/tabs/tools_off.png"),
+    files_on = lg.newImage("image/tabs/files_on.png"),
+    files_off = lg.newImage("image/tabs/files_off.png"),
     skysphere = lg.newImage("image/skysphere.png"),
 }
 IMAGE.grid_off = IMAGE.grid_on
@@ -187,21 +191,21 @@ function APP.load_texture(filename)
         end
     end
 end
-function APP.add_quad(id, x, y)
-    APP.texture[id] = Image_from_quad( APP.texture_atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
-end
+-- function APP.add_quad(id, x, y)
+--     APP.texture[id] = Image_from_quad( APP.texture_atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
+-- end
 
-function APP.add_color(coords, color)
-    -- print(color)
-    local id = To_id("color", coords)
-    if APP.palette[id] then return false end
+-- function APP.add_color(coords, color)
+--     -- print(color)
+--     local id = To_id("color", coords)
+--     if APP.palette[id] then return false end
 
-    local image_data = love.image.newImageData(1,1)
-    image_data:setPixel(0,0,unpack(color))
-    APP.palette[id] = lg.newImage(image_data)
-    APP.colors[id] = color
-    return id
-end
+--     local image_data = love.image.newImageData(1,1)
+--     image_data:setPixel(0,0,unpack(color))
+--     APP.palette[id] = lg.newImage(image_data)
+--     APP.colors[id] = color
+--     return id
+-- end
 
 -- function APP.load_palette(filename)
 --     local plt = {}--require(filename)
@@ -228,6 +232,7 @@ end
     -- APP.palette_atlas = lg.newImage(image_data)
     -- image_data:mapPixel(function(x,y,r,g,b,a) return nr,ng,nb end)
 -- end
+
 MOUSE = {
     old_x = 0,
     old_y = 0,
@@ -236,8 +241,8 @@ MOUSE = {
     active = false,
     tool = "pencil",
     texture = "texture 0:0",
-    color = "color 0:0",
-    texture_type = "texture",
+    -- color = "color 0:0",
+    -- texture_type = "texture",
 }
 
 --------------------------------------------------------------------------------------
@@ -252,12 +257,12 @@ MOUSE = {
 
 -- local save_obj = require"io.obj"
 
-
+local file_handler = require"file_handler"
 local Cube_map = require"scene"
 local hud = require"hud"
 local vec3 = cpml.vec3
 local camera = g3d.camera
-local new_cube, current_cube, new_text
+local new_cube, current_cube --, new_text
 local sky
 
 -- create the mesh for the block cursor
@@ -287,20 +292,7 @@ local Key = {
     shift = false
 }
 
-local save_load = {
-    json = require"io.json",
-    lua = require"io.lua",
-    obj = require"io.obj",
-    accepted_format = {json=1, lua=1, obj=1}
-}
-save_load.save = function(format, data, name, ...)
-    assert(save_load[format],"wrong format: "..format)
-    return save_load[format].save(data, name,...)
-end
-save_load.load = function(format, name, ...)
-    assert(save_load[format],"wrong format: "..format)
-    return save_load[format].load(name, ...)
-end
+
 
 ---return vec3 result or false
 local function get_side(pos, npos)
@@ -380,40 +372,40 @@ end
 --     nfs.write(CONFIG.save_name..".png", file_data:getString())
 -- end
 local function set_atlas()
-    APP.atlas = lg.newCanvas(128,256)
+    APP.atlas = lg.newCanvas(128,128)
     APP.atlas:renderTo( function()
         lg.draw(APP.texture_atlas,0,0)
-        lg.draw(APP.palette_atlas,0,128,0,TILE_SIZE,TILE_SIZE)
+        -- lg.draw(APP.palette_atlas,0,128,0,TILE_SIZE,TILE_SIZE)
     end)
 end
-local function modify_atlas()
-    local x,y = 0,0
-    local palette = require"palette"
-    local image_data = love.image.newImageData(8,8)
+-- local function modify_atlas()
+--     local x,y = 0,0
+--     local palette = require"palette"
+--     local image_data = love.image.newImageData(8,8)
 
-    for i=1,#palette do
-    -- for _,cor in pairs(APP.colors) do
-        local id = To_id("color", {x,y})
-        if APP.colors[id] then
-            image_data:setPixel(x,y,unpack(APP.colors[id]))
-            x = x+1
-            if x>7 then x=0;y=y+1 end
-        end
-	end
-    APP.palette_atlas = lg.newImage(image_data)
+--     for i=1,#palette do
+--     -- for _,cor in pairs(APP.colors) do
+--         local id = To_id("color", {x,y})
+--         if APP.colors[id] then
+--             image_data:setPixel(x,y,unpack(APP.colors[id]))
+--             x = x+1
+--             if x>7 then x=0;y=y+1 end
+--         end
+-- 	end
+--     APP.palette_atlas = lg.newImage(image_data)
 
-    set_atlas()
-end
+--     set_atlas()
+-- end
 
-function APP.replace_color(coords, color)
-    local id = To_id("color", coords)
-    APP.palette[id] = nil
-    APP.add_color(coords, color)
-    modify_atlas()
-    Cube_map:refresh()
-end
+-- function APP.replace_color(coords, color)
+--     local id = To_id("color", coords)
+--     APP.palette[id] = nil
+--     APP.add_color(coords, color)
+--     modify_atlas()
+--     Cube_map:refresh()
+-- end
 
-APP.cube_map_history = function(name)
+APP.cube_map_history = function(name) --used for undo and redo features in hud.lua
     Cube_map[name](Cube_map)
 end
 --------------------------------------------------------------------------------------
@@ -429,10 +421,10 @@ MOUSE.selected = {
 }
 
 MOUSE.set_texture = function(self, texture_index)
-    local it = Id_type(texture_index)
-    self[it] = texture_index
-    self.texture_type = it
-    new_cube.mesh:setTexture(APP[it == "color" and "palette" or "texture"][texture_index])
+    -- local it = Id_type(texture_index)
+    self["texture"] = texture_index
+    -- self.texture_type = it
+    new_cube.mesh:setTexture(APP["texture"][texture_index])
 end
 
 local mouse_tools = {
@@ -441,8 +433,8 @@ local mouse_tools = {
             if not(MOUSE.active) then return end
             
             if mb==1 then
-                print(MOUSE.texture_type)
-                Cube_map:add_cube( MOUSE[MOUSE.texture_type], {MOUSE.selected.new:unpack()})
+                -- print(MOUSE.texture_type)
+                Cube_map:add_cube( MOUSE.texture, {MOUSE.selected.new:unpack()})
             elseif mb==2 then
                 if Cube_map:remove_cube(MOUSE.selected.id) then
                     MOUSE.active = false
@@ -453,7 +445,7 @@ local mouse_tools = {
             if not(MOUSE.active) then return end
             
             if mb==1 then
-                Cube_map:paint_cube(MOUSE.selected.id, {texture = MOUSE[MOUSE.texture_type]})
+                Cube_map:paint_cube(MOUSE.selected.id, {texture = MOUSE.texture})
             elseif mb==2 then
                 local cube = Cube_map:get_cube( MOUSE.selected.id)
                 -- print(cube.texture_index)
@@ -492,24 +484,24 @@ function love.load(...)
 
     sky = g3d.newModel("model/dome.obj", IMAGE.skysphere, nil, nil, 500)
 
-    new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
+    -- -- new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     new_cube = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
-    MOUSE:set_texture("color 0:0")
-    local image_data = love.image.newImageData(8,8)
-    local x,y = 0,0
-    local palette = require"palette"
-    for _,cor in ipairs(palette) do
-        -- local r,g,b = unpack(cor)
-        local color_id = APP.add_color( {x,y}, cor)
-        if color_id then
-            image_data:setPixel(x,y,unpack(cor))
-            hud.new_color_button(color_id,x,y)
-            x = x+1
-            if x>7 then x=0;y=y+1 end
-        end
-	end
-    APP.palette_atlas = lg.newImage(image_data)
+    MOUSE:set_texture("texture 0:0")
+    -- local image_data = love.image.newImageData(8,8)
+    -- local x,y = 0,0
+    -- local palette = require"palette"
+    -- for _,cor in ipairs(palette) do
+    --     -- local r,g,b = unpack(cor)
+    --     local color_id = APP.add_color( {x,y}, cor)
+    --     if color_id then
+    --         image_data:setPixel(x,y,unpack(cor))
+    --         hud.new_color_button(color_id,x,y)
+    --         x = x+1
+    --         if x>7 then x=0;y=y+1 end
+    --     end
+	-- end
+    -- APP.palette_atlas = lg.newImage(image_data)
 
     for id,_ in pairs(APP.texture) do
         hud.new_texture_button(id)
@@ -538,6 +530,7 @@ function love.update(dt)
         camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta.v), math.rad(cam.phi.v), cam.offset.v)
     end
     if APP.toggle.light then
+        -- APP.shader:send("lightPosition", light.position)
         APP.shader:send("lightPosition", camera.position)
     end
     Key.ctrl = love.keyboard.isDown("lctrl")
@@ -551,6 +544,7 @@ end
 function love.draw()
     -- local s = APP.toggle.light and APP.shader
     -- lg.setDepthMode("lequal", false)
+    love.graphics.setColor(1,1,1)
     sky:draw()
     pivot.model:draw()
     Cube_map:draw()
@@ -562,7 +556,7 @@ function love.draw()
         love.graphics.setWireframe(false)
         if MOUSE.tool=="pencil" then
             lg.setColor(1,1,1)
-            new_text:draw( )
+            -- new_text:draw( )
             
             lg.setColor(1,1,1,0.6)
             lg.setMeshCullMode( "back" )
@@ -583,7 +577,7 @@ function love.keypressed(k)
         love.event.quit()
     end
     if k=="f1" then
-        save_load.obj.save(Cube_map, CONFIG.save_name)
+        file_handler.save("obj", Cube_map, CONFIG.save_name)
         -- save_atlas()
     end
     if Key.ctrl then
@@ -592,7 +586,7 @@ function love.keypressed(k)
         elseif k=='y' then
             Cube_map:redo()
         elseif k=='s' then
-            save_load.save("lua", Cube_map, CONFIG.save_name)
+            file_handler.save("lua", Cube_map, CONFIG.save_name)
 
             -- save_atlas()
         end
@@ -685,7 +679,7 @@ function love.mousemoved(mx,my, dx,dy)
         
         if nearest then
             -- print(nearest, unpack(position))
-            Cube_map.cubes[nearest].highlight = true
+            -- Cube_map.cubes[nearest].highlight = true
             local hit_position = vec3(position)
             
             MOUSE.active = true
@@ -693,7 +687,7 @@ function love.mousemoved(mx,my, dx,dy)
             local result_position = get_side(hit_position, nearest_position)
             MOUSE.selected = {pos = hit_position, new = result_position, id = nearest}
             local rx,ry,rz = result_position:unpack()
-            new_text:setTranslation(rx,ry,rz)
+            -- new_text:setTranslation(rx,ry,rz)
             new_cube:setTranslation(rx,ry,rz)
             rx,ry,rz = nearest_position:unpack()
             current_cube:setTranslation(rx,ry,rz)
@@ -712,9 +706,9 @@ function love.filedropped(file)
     end
 	local ext = string.lower( string.sub( filename:match("%.%w+$"),2))
 
-	if save_load.accepted_format[ext] then
+	if file_handler[ext] then
         if ext=="obj" then return end
-        Cube_map:load_file(save_load.load(ext, filename))
+        Cube_map:load_file(file_handler.load(ext, filename))
     end
 end
 
