@@ -1,5 +1,5 @@
 --- A 3 component vector.
--- @module vec3
+-- -@module 'vec3'
 
 local modules = (...):gsub('%.[^%.]+$', '') .. "."
 local precond = require(modules .. "_private_precond")
@@ -30,11 +30,6 @@ if type(jit) == "table" and jit.status() then
 end
 
 --- Constants
--- @table vec3
--- @field unit_x X axis of rotation
--- @field unit_y Y axis of rotation
--- @field unit_z Z axis of rotation
--- @field zero Empty vector
 vec3.unit_x = new(1, 0, 0)
 vec3.unit_y = new(0, 1, 0)
 vec3.unit_z = new(0, 0, 1)

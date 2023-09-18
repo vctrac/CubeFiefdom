@@ -3,20 +3,24 @@ local serpent = require "library.serpent"
 
 local function save_lua( data, filename)
     local save = io.open(filename ..".lua", 'w')
-    
+    assert(save, "could not load file")
     local t = {
         version = CONFIG.version,
         app_name = CONFIG.app_name,
-        palette_count = data.palette_count,
-        texture_count = data.texture_count,
+        count = data.count,
+        info = {},
         cubes = {}
     }
 
     for _,k in pairs(data.cubes) do
-        table.insert(t.cubes,{position = k.position , texture_index = k.texture_index})
+        -- if data.info[k.texture] and not(t.info[k.texture]) then
+        --     t.info[k.texture] = data.info[k.texture]
+        -- end
+        table.insert(t.cubes,{position = k.position , texture = k.texture})
     end
-
-    save:write(serpent.dump(t))
+    t.info= data.info
+    -- save:write(serpent.dump(t))
+    save:write("return " ..serpent.block(t, {comment = false}))
     save:close()
 end
 

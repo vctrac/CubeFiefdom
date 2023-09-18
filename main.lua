@@ -99,18 +99,18 @@ function printf( s, ...)
     old_print(string.format("%s %d : %s",filename, info.currentline, fs))
 end
 
-function To_id(prefix, coords)
-    local id = table.concat(coords,':')
-    return string.format("%s %s",prefix, id)
+function To_id( coords)
+    -- local id = 
+    return table.concat(coords,':')
 end
 function From_id(id)
-    local id_type = id:match("(.*) ")
-    local coords = id:match(" (.*)")
+    -- local id_type = id:match("(.*) ")
+    -- local coords = id:match(" (.*)")
     local t = {}
-    for num in string.gmatch(coords, '([^:]+)') do
+    for num in string.gmatch(id, '([^:]+)') do
         table.insert(t,tonumber(num))
     end
-    return id_type, t
+    return t
 end
 function Id_type(id)
     return id:match("(.*) ")
@@ -125,9 +125,10 @@ end
 --  ######   ########  #######  ########  ##     ## ######## 
 --------------------------------------------------------------------------------------
 -- print( love.filesystem.getWorkingDirectory( ))
-
-
-cpml = require"library.cpml"
+---@class Cpml
+---@module 'cpml'
+Cpml = require"library.cpml"
+---@module 'g3d'
 require"library.g3d"
 
 CONFIG = {
@@ -148,6 +149,8 @@ IMAGE = {
     center = lg.newImage("image/center.png"),
     -- new_text = lg.newImage("image/new_text.png"),
     button_frame = lg.newImage("image/buttons/button_frame.png"),
+    new_info_off = lg.newImage("image/buttons/new_info.png"),
+    new_info_on = lg.newImage("image/buttons/new_info_on.png"),
     pencil = lg.newImage("image/buttons/pencil.png"),
     brush = lg.newImage("image/buttons/brush.png"),
     rotate = lg.newImage("image/buttons/rotate.png"),
@@ -162,6 +165,7 @@ IMAGE = {
     files_on = lg.newImage("image/tabs/files_on.png"),
     files_off = lg.newImage("image/tabs/files_off.png"),
     skysphere = lg.newImage("image/skysphere.png"),
+    camera = lg.newImage("image/camera_lens.png"),
 }
 IMAGE.grid_off = IMAGE.grid_on
 IMAGE.texture_off = IMAGE.texture_on
@@ -170,6 +174,7 @@ IMAGE.redo_off = IMAGE.redo
 -- 
 
 APP = {
+    map = require"scene",
     toggle = {light=true, grid=false, texture=true},
     shader = lg.newShader(g3d.shaderpath, "shader/lighting.frag"),
     atlas = nil,
@@ -180,13 +185,14 @@ APP = {
     width = lg.getWidth(),
     height = lg.getHeight()
 }
+
 function APP.load_texture(filename)
     APP.atlas_data = love.image.newImageData("image/"..filename)
     APP.texture_atlas = lg.newImage(APP.atlas_data)
     local iw,ih = APP.texture_atlas:getDimensions()
     for x=0,math.floor(iw/TILE_SIZE)-1 do
         for y=0,math.floor(ih/TILE_SIZE)-1 do
-            local id = To_id("texture", {x,y})
+            local id = To_id({x,y})
             APP.texture[id] = Image_from_quad( APP.atlas_data, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
         end
     end
@@ -238,9 +244,9 @@ MOUSE = {
     old_y = 0,
     move_x = 0,
     move_y = 0,
-    active = false,
+    mode = "wait",
     tool = "pencil",
-    texture = "texture 0:0",
+    texture = "0:0",
     -- color = "color 0:0",
     -- texture_type = "texture",
 }
@@ -258,12 +264,19 @@ MOUSE = {
 -- local save_obj = require"io.obj"
 
 local file_handler = require"file_handler"
-local Cube_map = require"scene"
+-- local APP.map = require"scene"
 local hud = require"hud"
-local vec3 = cpml.vec3
+
+-- CPML 3D Vector
+---@class vec3:Cpml
+---@field x number
+---@field y number
+---@field z number
+---@module 'vec3'
+local vec3 = Cpml.vec3
 local camera = g3d.camera
 local new_cube, current_cube --, new_text
-local sky
+local sky, camera_lens
 
 -- create the mesh for the block cursor
 do
@@ -292,9 +305,9 @@ local Key = {
     shift = false
 }
 
-
-
----return vec3 result or false
+---@param pos vec3
+---@param npos vec3
+---@return vec3 npos
 local function get_side(pos, npos)
     local dif = (pos-npos)*2
     --converted to string to avoid float point precision problems
@@ -402,58 +415,100 @@ end
 --     APP.palette[id] = nil
 --     APP.add_color(coords, color)
 --     modify_atlas()
---     Cube_map:refresh()
+--     APP.map:refresh()
 -- end
 
 APP.cube_map_history = function(name) --used for undo and redo features in hud.lua
-    Cube_map[name](Cube_map)
+    APP.map[name](APP.map)
 end
+
 --------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
 -- MOUSE state ------------------------------------------------------------------
 ------------------------------------------------------------------------------
 ---------------------------------------------------------------------------
-
+MOUSE.multi = {}
 MOUSE.selected = {
     pos = vec3(),
     new = vec3(),
     id = "",
 }
+MOUSE.set_mode = function(mode)
+    MOUSE.mode = mode
+end
 
+MOUSE.get_cube_under = function( )
+    local cp = vec3(unpack(camera.position))
+    local ray = camera.get_mouse_ray()
+
+    local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
+    -- print(nearest)
+    if nearest then
+        -- print(nearest, unpack(position))
+        -- APP.map.cubes[nearest].highlight = true
+        local hit_position = vec3(position)
+        
+        -- MOUSE.active = true
+        MOUSE.mode = "edit"
+        local nearest_position = vec3(APP.map.cubes[nearest].position)
+        local result_position = get_side(hit_position, nearest_position)
+        MOUSE.selected = { new = result_position, id = nearest}
+        
+        local rx,ry,rz = result_position:unpack()
+        -- local new_id = To_id({rx,ry,rz})
+        -- if not MOUSE.multi[new_id] then
+        --     MOUSE.multi[new_id] = {pos={rx,ry,rz},id=nearest}
+        -- end
+        -- new_text:setTranslation(rx,ry,rz)
+        new_cube:setTranslation(rx,ry,rz)
+        rx,ry,rz = nearest_position:unpack()
+        current_cube:setTranslation(rx,ry,rz)
+    else
+        -- MOUSE.active = false
+        MOUSE.mode = "wait"
+    end
+end
 MOUSE.set_texture = function(self, texture_index)
     -- local it = Id_type(texture_index)
-    self["texture"] = texture_index
+    self.texture = texture_index
     -- self.texture_type = it
     new_cube.mesh:setTexture(APP["texture"][texture_index])
+
+    hud.load_tool_info(texture_index)
 end
 
 local mouse_tools = {
-    press = {
+    release = {
         pencil = function(mx,my,mb)
-            if not(MOUSE.active) then return end
-            
-            if mb==1 then
-                -- print(MOUSE.texture_type)
-                Cube_map:add_cube( MOUSE.texture, {MOUSE.selected.new:unpack()})
-            elseif mb==2 then
-                if Cube_map:remove_cube(MOUSE.selected.id) then
-                    MOUSE.active = false
+            if MOUSE.mode == "edit" then
+                if mb==1 then
+                    -- print(MOUSE.texture_type)
+                    -- for key, selected in pairs(MOUSE.multi) do
+                    --     APP.map:add_cube( MOUSE.texture, selected.pos)
+                    -- end
+                    -- MOUSE.multi = {}
+                    APP.map:add_cube( MOUSE.texture, {MOUSE.selected.new:unpack()})
+                elseif mb==2 then
+                    if APP.map:remove_cube(MOUSE.selected.id) then
+                        MOUSE.mode = "wait"
+                    end
                 end
             end
         end,
         brush = function(mx,my,mb)
-            if not(MOUSE.active) then return end
+            if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                Cube_map:paint_cube(MOUSE.selected.id, {texture = MOUSE.texture})
+                APP.map:paint_cube(MOUSE.selected.id, {texture = MOUSE.texture})
             elseif mb==2 then
-                local cube = Cube_map:get_cube( MOUSE.selected.id)
-                -- print(cube.texture_index)
-                MOUSE:set_texture(cube.texture_index)
+                local cube = APP.map:get_cube( MOUSE.selected.id)
+                -- print(cube.texture)
+                if not cube then return end
+                MOUSE:set_texture(cube.texture)
             end
         end,
     },
-    release = {
+    press = {
         pencil = function(mx,my,mb)
 
         end,
@@ -480,14 +535,14 @@ function love.load(...)
     -- lg.setBackgroundColor(0.502,0.502,1)
 
     APP.load_texture("tex.png")
-    Cube_map:new()
+    APP.map:new()
 
     sky = g3d.newModel("model/dome.obj", IMAGE.skysphere, nil, nil, 500)
-
+    camera_lens = g3d.newSprite(IMAGE["camera"],{vertical = true, scale = 0.5})
     -- -- new_text = g3d.newSprite(IMAGE["new_text"],{vertical = true })
     new_cube = g3d.newModel(CUBE, nil)
     pivot.model = g3d.newSprite(IMAGE["center"],{vertical = true, scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
-    MOUSE:set_texture("texture 0:0")
+    MOUSE:set_texture("0:0")
     -- local image_data = love.image.newImageData(8,8)
     -- local x,y = 0,0
     -- local palette = require"palette"
@@ -507,7 +562,13 @@ function love.load(...)
         hud.new_texture_button(id)
     end
     set_atlas()
-    Cube_map:refresh()
+    APP.map:refresh()
+
+    -- APP.map:add_info("0:0", "breakable", "true")
+    -- APP.map:add_info("0:2", "walkable", true)
+    -- APP.map:add_info("1:2", "walkable", true)
+    -- APP.map:add_info("1:2", "breakable", false)
+    -- APP.map:add_info("3:2", "walkable", true)
 end
 
 function love.update(dt)
@@ -516,17 +577,18 @@ function love.update(dt)
         MOUSE.move_y = 0
     end
     if APP.first_person_view then
-        camera.firstPersonMovement(dt)
+        -- camera.firstPersonMovement(dt)
+        camera.movement(dt)
     else
-        if MOUSE.rotating then
+        if MOUSE.mode=="rotating" then
             cam.theta:update(10,dt)
             cam.phi:update(10,dt)
         end
         
         cam.offset:update(5,dt)
-        -- if MOUSE.panning then
+        if MOUSE.mode~="hud" then
             pivot_movement(dt)
-        -- end
+        end
         camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta.v), math.rad(cam.phi.v), cam.offset.v)
     end
     if APP.toggle.light then
@@ -547,9 +609,9 @@ function love.draw()
     love.graphics.setColor(1,1,1)
     sky:draw()
     pivot.model:draw()
-    Cube_map:draw()
+    APP.map:draw()
     -- lg.setColor(1,1,1)
-    if MOUSE.active then
+    if MOUSE.mode=="edit" then
         love.graphics.setColor(0,0,0)
         love.graphics.setWireframe(true)
         current_cube:draw( )
@@ -560,14 +622,22 @@ function love.draw()
             
             lg.setColor(1,1,1,0.6)
             lg.setMeshCullMode( "back" )
-            new_cube:draw( )
+            -- for key, selected in pairs(MOUSE.multi) do
+                -- new_cube:setTranslation(selected.pos[1],selected.pos[2],selected.pos[3])
+                new_cube:draw( )
+            -- end
+            -- new_cube:draw( )
             lg.setMeshCullMode("none")
         end
+        
     end
-    if not APP.first_person_view then
+    -- if not APP.first_person_view then
+    if APP.first_person_view then
+        camera_lens:draw()
+    else
         hud:draw()
     end
-    
+    love.graphics.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
     -- lg.setColor(1,1,1,1)
     love.graphics.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
 end
@@ -577,21 +647,21 @@ function love.keypressed(k)
         love.event.quit()
     end
     if k=="f1" then
-        file_handler.save("obj", Cube_map, CONFIG.save_name)
+        file_handler.save("obj", APP.map, CONFIG.save_name)
         -- save_atlas()
     end
     if Key.ctrl then
         if k=='z' then
-            Cube_map:undo()
+            APP.map:undo()
         elseif k=='y' then
-            Cube_map:redo()
+            APP.map:redo()
         elseif k=='s' then
-            file_handler.save("lua", Cube_map, CONFIG.save_name)
+            file_handler.save("lua", APP.map, CONFIG.save_name)
 
             -- save_atlas()
         end
-    else
-        if k=="n" then Cube_map:clear() end
+    elseif MOUSE.mode~="hud" then
+        -- if k=="n" then APP.map:clear() end
         if k=="l" then APP.toggle.light = not APP.toggle.light end
         if k=="g" then APP.toggle.grid = not APP.toggle.grid end
         if k=="t" then APP.toggle.texture = not APP.toggle.texture end
@@ -600,8 +670,9 @@ function love.keypressed(k)
             love.mouse.setRelativeMode(APP.first_person_view)
             if APP.first_person_view then
                 local cx,cy,cz = unpack(camera.position)
+                camera_lens:setTranslation(cx,cy,cz)
                 camera.lookInDirection(cx,cy,cz, -math.rad(cam.theta.v+90), -math.rad(cam.phi.v))
-                MOUSE.active = false
+                MOUSE.mode = "wait"
             end
         end
         if k=="lalt" and not APP.first_person_view then
@@ -609,7 +680,7 @@ function love.keypressed(k)
             hud.setToolActiveKey(key)
         end
     end
-    
+    hud.keypressed(k)
 end
 function love.keyreleased(k)
     if k=="lalt" then
@@ -623,27 +694,35 @@ function love.mousepressed(mx,my, b)
 
     if b==3 then
         if Key.shift then
-            MOUSE.panning = true
+            -- MOUSE.panning = true
+            MOUSE.mode = "panning"
         else
-            MOUSE.rotating = true
+            -- MOUSE.rotating = true
+            MOUSE.mode = "rotating"
         end
         MOUSE.old_x = mx
         MOUSE.old_y = my
-    elseif MOUSE.active then
+    elseif MOUSE.mode=="edit" then
         mouse_tools.press[MOUSE.tool](mx,my,b)
     else
         if b==1 then hud.pointer:raise("press") end
     end
 end
-function love.mousereleased(x,y, b)
+function love.mousereleased(mx,my, b)
     if APP.first_person_view then return end
-    if (b == 1) and not(MOUSE.active) then
-		hud.pointer:raise("release")
-	end
+    -- if (b == 1) and not(MOUSE.active) then
+		-- hud.pointer:raise("release")
+	-- end
     if b==3 then
-        MOUSE.rotating = false
-        MOUSE.panning = false
+        -- MOUSE.rotating = false
+        -- MOUSE.panning = false
+        MOUSE.mode="wait"
         -- love.mouse.setPosition(MOUSE.old_x, MOUSE.old_y)
+    elseif MOUSE.mode=="edit" then
+        mouse_tools.release[MOUSE.tool](mx,my,b)
+        MOUSE.get_cube_under()
+    else
+        if b==1 then hud.pointer:raise("release") end
     end
 end
 function love.wheelmoved(x,y)
@@ -656,44 +735,48 @@ function love.mousemoved(mx,my, dx,dy)
     MOUSE.stopped = false
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
-    elseif MOUSE.rotating then
+    elseif MOUSE.mode=="rotating" then
         cam.theta = cam.theta + dx*0.5
         cam.phi.t = math.min(89,math.max(-89,cam.phi.t + dy*0.5))
-        MOUSE.active = false
-    elseif MOUSE.panning then
+    elseif MOUSE.mode=="panning" then
         MOUSE.move_x = dx
         MOUSE.move_y = dy
-        MOUSE.active = false
     elseif hud.pointer:doesOverlapElement(hud.window) then
-        MOUSE.active = false
+        MOUSE.mode = "hud"
         if (love.mouse.isDown(1)) then
             hud.pointer:setPosition(mx, my)
             hud.pointer:raise("drag", dx, dy)
         end
     else
+        -- local cp = Cpml.vec3(unpack(camera.position))
+        -- local ray = camera.get_mouse_ray()
 
-        local cam = cpml.vec3(unpack(camera.position))
-        local ray = camera.get_mouse_ray()
-
-        local nearest, position = Cube_map:cast_ray(cam.x, cam.y, cam.z, ray.x, ray.y, ray.z)
+        -- local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
         
-        if nearest then
-            -- print(nearest, unpack(position))
-            -- Cube_map.cubes[nearest].highlight = true
-            local hit_position = vec3(position)
+        -- if nearest then
+        --     -- print(nearest, unpack(position))
+        --     -- APP.map.cubes[nearest].highlight = true
+        --     local hit_position = vec3(position)
             
-            MOUSE.active = true
-            local nearest_position = vec3(Cube_map.cubes[nearest].position)
-            local result_position = get_side(hit_position, nearest_position)
-            MOUSE.selected = {pos = hit_position, new = result_position, id = nearest}
-            local rx,ry,rz = result_position:unpack()
-            -- new_text:setTranslation(rx,ry,rz)
-            new_cube:setTranslation(rx,ry,rz)
-            rx,ry,rz = nearest_position:unpack()
-            current_cube:setTranslation(rx,ry,rz)
-        else
-            MOUSE.active = false
-        end
+        --     MOUSE.active = true
+        --     local nearest_position = vec3(APP.map.cubes[nearest].position)
+        --     local result_position = get_side(hit_position, nearest_position)
+        --     MOUSE.selected = { new = result_position, id = nearest}
+            
+        --     local rx,ry,rz = result_position:unpack()
+        --     -- local new_id = To_id({rx,ry,rz})
+        --     -- if not MOUSE.multi[new_id] then
+        --     --     MOUSE.multi[new_id] = {pos={rx,ry,rz},id=nearest}
+        --     -- end
+        --     -- new_text:setTranslation(rx,ry,rz)
+        --     new_cube:setTranslation(rx,ry,rz)
+        --     rx,ry,rz = nearest_position:unpack()
+        --     current_cube:setTranslation(rx,ry,rz)
+        -- else
+        --     MOUSE.active = false
+        -- end
+
+        MOUSE.get_cube_under()
     end
 
     hud.pointer:setPosition(mx, my)
@@ -708,7 +791,13 @@ function love.filedropped(file)
 
 	if file_handler[ext] then
         if ext=="obj" then return end
-        Cube_map:load_file(file_handler.load(ext, filename))
+        APP.map:load_file(file_handler.load(ext, filename))
+    end
+end
+
+function love.textinput(t)
+    if MOUSE.mode=="hud" then
+        hud.textinput(t)
     end
 end
 

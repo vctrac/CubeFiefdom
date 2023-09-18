@@ -3,10 +3,10 @@
 -- MIT license
 
 local newMatrix = require(g3d.path .. ".matrices")
-local g3d = g3d -- save a reference to g3d in case the user makes it non-global
-local mat4 = cpml.mat4
-local quat = cpml.quat
-local vec3 = cpml.vec3
+-- local g3d = g3d -- save a reference to g3d in case the user makes it non-global
+local mat4 = Cpml.mat4
+-- local quat = Cpml.quat
+local vec3 = Cpml.vec3
 ----------------------------------------------------------------------------------------------------
 -- define the camera singleton
 ----------------------------------------------------------------------------------------------------
@@ -15,7 +15,12 @@ local direction = 0
 local pitch = 0
 local default_speed = 4
 local sprint_speed = 8
+local rad90 = math.rad(90)
+local key = love.keyboard.isDown
 
+---@class camera
+---@field pivot function pivot the camera around a point
+---@field getDirectionPitch function return direction, pitch
 local camera = {
     fov = math.pi/2,
     nearClip = 0.01,
@@ -33,6 +38,23 @@ function camera.getDirectionPitch()
     return direction, pitch
 end
 
+
+---@param theta? number in radians
+---@param phi? number in radians
+---@return table forward_vector
+function camera.get_forward_vector(theta, phi)
+    theta = theta or direction
+    phi = phi or pitch
+
+    local d = theta-rad90
+    local X = math.sin(-d) * math.cos(phi)
+    local Y = math.cos(d) * math.cos(phi)
+    local Z = math.sin(phi)
+
+    -- Return the vector normalized
+    local mag = math.sqrt(X*X + Y*Y + Z*Z)
+    return {X/mag, Y/mag, Z/mag}
+end
 -- function camera.target_to_direction_and_pitch(x, y, z)
 --     local target_x = camera.target[1] or x
 --     local target_y = camera.target[2] or y
@@ -63,8 +85,9 @@ function camera.getLookVector()
     return vx,vy,vz
 end
 
-function camera.get_mouse_ray()
 
+---@return vec3 world_coord
+function camera.get_mouse_ray()
     --https://love2d.org/forums/viewtopic.php?p=240466#p240466
 
 	-- viewport space
@@ -96,14 +119,21 @@ function camera.get_mouse_ray()
 	return world_coord:normalize()
 end
 
+-- pivot the camera around a point
+---@param target_x number #
+---@param target_y number #
+---@param target_z number #
+---@param distance number #
+---@param theta number in radians
+---@param phi number in radians
 function camera.pivot(target_x,target_y,target_z, theta, phi, distance)
 
-    -- turn the cos of the pitch into a sign value, either 1, -1, or 0
-    local sign = math.cos(phi)
-    sign = (sign > 0 and 1) or (sign < 0 and -1) or 0
+    -- turn the cos of the pitch into a sign value, either 1 or -1
+    local cosPitch = math.cos(phi)
+    local sign = (cosPitch > 0) and 1 or -1
 
-    -- don't let cosPitch ever hit 0, because weird camera glitches will happen, or so it says
-    local cosPitch = math.max(sign*math.abs(math.cos(phi)), 0.00001)
+    -- don't let cosPitch ever hit 0, because weird camera glitches will happen
+    cosPitch = sign*math.max(math.abs(cosPitch), 0.00001)
 
     -- Calculate the new camera position after pivoting
     local new_x = target_x + distance * math.sin(theta) * cosPitch
@@ -149,13 +179,13 @@ function camera.lookInDirection(x,y,z, directionTowards,pitchTowards)
     direction = directionTowards or direction
     pitch = pitchTowards or pitch
 
-    -- turn the cos of the pitch into a sign value, either 1, -1, or 0
-    local sign = math.cos(pitch)
-    sign = (sign > 0 and 1) or (sign < 0 and -1) or 0
+    -- turn the cos of the pitch into a sign value, either 1 or -1
+    local cosPitch = math.cos(pitch)
+    local sign = (cosPitch > 0) and 1 or -1
 
     -- don't let cosPitch ever hit 0, because weird camera glitches will happen
-    local cosPitch = math.max(sign*math.abs(math.cos(pitch)), 0.00001)
-
+    cosPitch = sign*math.max(math.abs(cosPitch), 0.00001)
+    
     -- convert the direction and pitch into a target point
     camera.target[1] = camera.position[1]+math.cos(direction)*cosPitch
     camera.target[2] = camera.position[2]+math.sin(direction)*cosPitch
@@ -178,6 +208,39 @@ end
 -- recreate the camera's orthographic projection matrix from its current values
 function camera.updateOrthographicMatrix(size)
     camera.projectionMatrix:setOrthographicMatrix(camera.fov, size or 5, camera.nearClip, camera.farClip, camera.aspectRatio)
+end
+
+-- first person camera movement with WASD
+function camera.movement(dt)
+    local cameraMoved = false
+    local speed = key"lshift" and sprint_speed or default_speed
+
+    local movefb = (key"w" and 1 or 0) + (key"s" and -1 or 0)
+    if movefb~=0 then
+        local forward = camera.get_forward_vector()
+        for i=1,3 do
+            camera.position[i] = camera.position[i] +movefb*forward[i]*speed*dt
+        end
+        cameraMoved = true
+    end
+
+    local movelr = (key"a" and 1 or 0) + (key"d" and -1 or 0)
+    if movelr~=0 then
+        local forward = camera.get_forward_vector(direction+rad90*movelr, 0)
+        camera.position[1] = camera.position[1] +forward[1]*speed*dt
+        camera.position[2] = camera.position[2] +forward[2]*speed*dt
+        cameraMoved = true
+    end
+
+    local moveud = (key"space" and 1 or 0) + (key"c" and -1 or 0)
+    if moveud~=0 then
+        camera.position[3] = camera.position[3] + moveud*speed*dt
+        cameraMoved = true
+    end
+
+    if cameraMoved then
+        camera.lookInDirection()
+    end
 end
 
 -- simple first person camera movement with WASD

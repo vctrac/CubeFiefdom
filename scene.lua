@@ -46,7 +46,7 @@ aabb_model:generateAABB()
 local change_index = 0
 local undo_list = {}
 local redo_list = {}
-local cube_count = 0
+-- local self.count = 0
 -- local model
 
 local function add_change(tab)--{cmd,index,texture}
@@ -58,10 +58,11 @@ end
 
 local Scene = {
     cubes = {},
+    info = {},
     model = nil,
     -- alpha_ids = {},
-    palette_count = 0,
-    texture_count = 0,
+    -- palette_count = 0,
+    count = 0,
 }
 
 --This function was taken from the g3d_voxel demo and franksteined here
@@ -112,51 +113,32 @@ local function remesh()
 
 end
 local add = function(index, texture_id, position)
-    local itype, ipos = From_id(texture_id)
+    local ipos = From_id(texture_id)
     
-    if itype=="color" then 
-        Scene.palette_count = Scene.palette_count+1
-        ipos[2] = ipos[2]+8
-    else
-        Scene.texture_count = Scene.texture_count+1
-    end
+    Scene.count = Scene.count+1
+
     -- if(a==7)then Scene.alpha_ids[index] = true end
     
-    Scene.cubes[index] = {uv = ipos, texture_index = texture_id, position = position}
-    cube_count = cube_count+1
+    Scene.cubes[index] = {uv = ipos, texture = texture_id, position = position}
     remesh()
     return true
 end
 local remove = function(index)-- beware of the bug!
-    local itype,_ = From_id(Scene.cubes[index].texture_index)
-    if itype=="color" then
-        Scene.palette_count = Scene.palette_count-1
-    else
-        Scene.texture_count = Scene.texture_count-1
-    end
-    cube_count = cube_count-1
+    Scene.count = Scene.count-1
+
     -- if Scene.alpha_ids[index] then Scene.alpha_ids[index] = nil end
     Scene.cubes[index] = nil
     remesh()
 end
 local function paint(index, texture_id)
-    local itype, ipos = From_id(texture_id)
-    local old_tex_index = Scene.cubes[index].texture_index
+    local ipos = From_id(texture_id)
+    local old_tex = Scene.cubes[index].texture
 
-    if itype=="texture" then
-        if APP.palette[old_tex_index] then
-            Scene.texture_count = Scene.texture_count+1
-            Scene.palette_count = Scene.palette_count-1
-        end
-    else
-        ipos[2] = ipos[2]+8
-        if APP.texture[old_tex_index] then
-            Scene.texture_count = Scene.texture_count-1
-            Scene.palette_count = Scene.palette_count+1
-        end
+    if old_tex==texture_id then
+        return true
     end
     -- if(a==7)then Scene.alpha_ids[index] = true end
-    Scene.cubes[index].texture_index = texture_id
+    Scene.cubes[index].texture = texture_id
     Scene.cubes[index].uv = ipos
 
     remesh()
@@ -171,38 +153,35 @@ Scene.clear=function(self)
     self.undo_list = {}
     change_index = 0
     -- self.alpha_ids = {}
-    self.palette_count = 0
-    self.texture_count = 0
+    -- self.palette_count = 0
+    self.count = 0
 end
 
 Scene.new=function(self)
     self:clear()
-    local id = "translation 0:0:0"
-    local texture_id = "texture 0:0"
+    local id = "0:0:0"
+    local texture_id = "0:0"
 
     add(id, texture_id, {0,0,0})
     remesh()
-    cube_count = 1
+    self.count = 1
 end
 Scene.load_file=function(self, data)
     --reset all
     self:clear()
-    self.palette_count = data.palette_count
-    self.texture_count = data.texture_count
+    -- self.palette_count = data.palette_count
+    self.count = data.count
+    self.info = data.info
     
 
-    for i,k in ipairs(data.cubes) do
-        local id = To_id("translation", k.position)
-        local itype, ipos = From_id(k.texture_index)
-        -- local id_type = Id_type(k.texture_index)
+    for _,k in ipairs(data.cubes) do
+        local id = To_id(k.position)
+        local ipos = From_id(k.texture)
+        -- local id_type = Id_type(k.texture)
         
-        if itype=="color" then
-            ipos[2] = ipos[2]+8
-        end
-        
-        self.cubes[id] = {uv = ipos, texture_index = k.texture_index, position = k.position}
+        self.cubes[id] = {uv = ipos, texture = k.texture, position = k.position}
     end
-    cube_count = #data.cubes
+    -- self.count = #data.cubes
     remesh()
 end
 Scene.refresh = function(self)
@@ -210,25 +189,25 @@ Scene.refresh = function(self)
 end
 
 Scene.add_cube = function(self, texture_id, position)
-    local index = To_id("translation", position)
+    local index = To_id(position)
     if self.cubes[index] then return false end
     
     add_change( {"add",index,texture_id})
     return add(index, texture_id, position) 
 end
 Scene.remove_cube = function(self, id)
-    if cube_count==1 then return false end
-    -- print(cube_count)
+    if self.count==1 then return false end
+    -- print(self.count)
     local index
     if type(id)=="string" then
         index = id
     elseif type(id)=="table" then
-        index = To_id("translation", id)
+        index = To_id(id)
     else
         return false
     end
 
-    local texture_id = tostring(self.cubes[index].texture_index)
+    local texture_id = tostring(self.cubes[index].texture)
     add_change({"remove",index,texture_id})
     remove(index)
     
@@ -239,7 +218,7 @@ Scene.get_cube = function(self,id)
     if type(id)=="string" then
         index = id
     elseif type(id)=="table" then
-        index = To_id("translation", id)
+        index = To_id(id)
     else
         return false
     end
@@ -250,14 +229,14 @@ Scene.paint_cube = function(self, id, tab)
     if type(id)=="string" then
         index = id
     elseif type(id)=="table" then
-        index = To_id("translation", id)
+        index = To_id(id)
     else
         return false
     end
     if not self.cubes[index] then return false end
 
-    if tab.texture and tab.texture~=self.cubes[index].texture_index then
-        add_change({"paint",index, tab.texture, self.cubes[index].texture_index})
+    if tab.texture and tab.texture~=self.cubes[index].texture then
+        add_change({"paint",index, tab.texture, self.cubes[index].texture})
         return paint(index, tab.texture)
     end
 end
@@ -282,7 +261,7 @@ Scene.redo = function(self)
     if op[1] == "remove" then--remove
         remove(op[2])
     elseif op[1] == "add" then--add
-        local _, ipos = From_id(op[2])
+        local ipos = From_id(op[2])
         add(op[2], op[3], ipos)
     elseif op[1] == "paint" then--paint
         paint(op[2], op[3])
@@ -303,7 +282,7 @@ Scene.undo = function(self)
     if op[1] == "add" then--remove
         remove(op[2])
     elseif op[1] == "remove" then--add
-        local itype, ipos = From_id(op[2])
+        local ipos = From_id(op[2])
         add(op[2], op[3], ipos)
     elseif op[1] == "paint" then--paint
         paint(op[2], op[4])
@@ -328,6 +307,81 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     end
     return n, p
 end
+local string2bool = {["true"]=true, ["false"]=false}
+---@param id string
+---@param key string
+---@param value any
+Scene.add_info = function(self, id, key, value)
+    if not self.info[id] then
+        self.info[id] = {}
+    end
+    local v = value
+    local isBool = string2bool[string.lower(v)]
+    
+    if tonumber(v) then
+        v = tonumber(v)
+    elseif isBool ~=nil then
+        v = isBool
+    end
+    
+    print(key, v)
+    self.info[id][key] = v
+end
+
+---@param id string
+---@param key string
+---@param new string|any a new 'key'
+Scene.set_info_key = function(self, id, key, new)
+    printf("id:%s, k:%s, n:%s",id, key, new)
+    -- 
+
+
+    if not self.info[id] then
+        self.info[id] = {}
+        self.info[id][new] = "..."
+        print"case1"
+    elseif self.info[id][new] then
+        print"case4"
+        return
+    else
+        if self.info[id][key] then
+            if new~="" then--if new key is empty than delete it
+                self.info[id][new] = self.info[id][key]
+                print"case2"
+            end
+            self.info[id][key] = nil
+            
+            --check if there is no more info for this tile
+            local c = 0
+            for _ in pairs(self.info[id]) do
+                c = c +1
+            end
+            if c==0 then self.info[id] = nil end
+        else
+            self.info[id][new] = "..."
+            print"case3"
+        end
+    end
+end
+-- Scene.set_info_value = function(self, id, tipo, key, new)
+--     if not self.info[id] then
+--         return
+--     end
+--     self.info[id][key] = new
+-- end
+
+--Returns a <b>table</b> with one or multiple pars of <i>[ keys ]</i> and <i>[ values ]</i>,</br>
+-- or <b>empty table</b> if there is no info for this ID</br>
+-- { [key1]=value, [key2]=value, ... }
+---@param id string
+---@return table info
+Scene.get_info = function(self, id)
+    if self.info[id] then
+        return self.info[id]
+    end
+    return {}
+end
+
 Scene.draw = function(self)
     local s = APP.toggle.light and APP.shader
     local t = APP.toggle.texture
@@ -343,13 +397,13 @@ Scene.draw = function(self)
         -- love.graphics.setColor(0,0,0)
     if t then
         love.graphics.setColor(1,1,1)
-        Scene.model:draw(s)
+        self.model:draw(s)
     end
 
     if g then
         love.graphics.setColor(0,0,0)
         love.graphics.setWireframe(true)
-        Scene.model:draw( )
+        self.model:draw( )
         love.graphics.setWireframe(false)
     end
     -- end
