@@ -1,10 +1,10 @@
 -- tab_tools.lua
 local utf8 = require("utf8")
-local Inky = require"library.inky"
+local Inky = require"library.Inky"
 local Button = require"ui.button"
 local Theme = require"ui.Theme"
 
-local gradient = (loadfile("misc/gradient.lua")())("horizontal",{ 0.45,0.45,0.45,1},Theme.tab.active_color)
+local gradient = require"misc.gradient"("horizontal",{ 0.45,0.45,0.45,1},Theme.tab.active_color)
 local button_size = 22
 local tool_buttons = {}
 local texture_buttons = {}

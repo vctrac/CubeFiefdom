@@ -1,4 +1,4 @@
-local Inky = require("library.inky")
+local Inky = require("library.Inky")
 
 local Knob = Inky.defineElement(function(self)
 	self.props.hovered = false

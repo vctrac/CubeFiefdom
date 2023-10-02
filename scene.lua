@@ -46,8 +46,9 @@ aabb_model:generateAABB()
 local change_index = 0
 local undo_list = {}
 local redo_list = {}
--- local self.count = 0
--- local model
+
+local tile_row_size = 8
+local tile_column_size = 8
 
 local function add_change(tab)--{cmd,index,texture}
     local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
@@ -73,8 +74,8 @@ local function remesh()
     local function addFace(x,y,z, mx,my,mz, u,v, flip)
         for i=1, 6 do
             local df = 0.001 --this variable here prevents texture bleeding
-            local pu = 1/8 - df
-            -- local pv = 1/8 - df
+            local pu = 1/tile_row_size - df
+            -- local pv = 1/tile_column_size - df
             local primary = i%2 == (flip and 0 or 1)
             local secondary = i > 2 and i < 6
             verts[index] = {}
@@ -89,7 +90,7 @@ local function remesh()
             verts[index][9]  = 255
             verts[index][10] = 255
             verts[index][11] = 255
-            verts[index][12] = 255
+            verts[index][12] = 155
             index = index+1
         end
     end
@@ -97,15 +98,21 @@ local function remesh()
     for _,cube in pairs(Scene.cubes) do
         local x,y,z = cube.position[1], cube.position[2], cube.position[3]
         local u,v = unpack(cube.uv)
-        u = u/8
-        v = v/8
-        if not Scene:get_cube( {x-1,y,z}) then addFace(x,y,z,   0,1,2, u,v) end --front
-        if not Scene:get_cube( {x,y+1,z}) then addFace(x,y+1,z, 1,0,2, u,v) end --left
-        if not Scene:get_cube( {x,y,z-1}) then addFace(x,y,z,   1,2,0, u,v) end --botton
+        u = u/tile_row_size
+        v = v/tile_column_size
+        local nc = Scene:get_cube( {x-1,y,z})
+        if not nc or nc.dynamic then addFace(x,y,z,   0,1,2, u,v) end --front
+        nc = Scene:get_cube( {x,y+1,z})
+        if not nc or nc.dynamic then addFace(x,y+1,z, 1,0,2, u,v) end --left
+        nc = Scene:get_cube( {x,y,z-1})
+        if not nc or nc.dynamic then addFace(x,y,z,   1,2,0, u,v) end --botton
         
-        if not Scene:get_cube( {x+1,y,z}) then addFace(x+1,y,z, 0,1,2, u,v, true) end --back
-        if not Scene:get_cube( {x,y-1,z}) then addFace(x,y,z,   1,0,2, u,v, true) end --right
-        if not Scene:get_cube( {x,y,z+1}) then addFace(x,y,z+1, 1,2,0, u,v, true) end --top
+        nc = Scene:get_cube( {x+1,y,z})
+        if not nc or nc.dynamic then addFace(x+1,y,z, 0,1,2, u,v, true) end --back
+        nc = Scene:get_cube( {x,y-1,z})
+        if not nc or nc.dynamic then addFace(x,y,z,   1,0,2, u,v, true) end --right
+        nc = Scene:get_cube( {x,y,z+1})
+        if not nc or nc.dynamic then addFace(x,y,z+1, 1,2,0, u,v, true) end --top
 
     end
     Scene.model = g3d.newModel(verts, APP.atlas, {-0.5,-0.5,-0.5})
@@ -179,7 +186,7 @@ Scene.load_file=function(self, data)
         local ipos = From_id(k.texture)
         -- local id_type = Id_type(k.texture)
         
-        self.cubes[id] = {uv = ipos, texture = k.texture, position = k.position}
+        self.cubes[id] = {uv = ipos, texture = k.texture, position = k.position, dynamic = k.dynamic}
     end
     -- self.count = #data.cubes
     remesh()
@@ -315,16 +322,14 @@ Scene.add_info = function(self, id, key, value)
     if not self.info[id] then
         self.info[id] = {}
     end
+
     local v = value
     local isBool = string2bool[string.lower(v)]
-    
     if tonumber(v) then
         v = tonumber(v)
     elseif isBool ~=nil then
         v = isBool
     end
-    
-    print(key, v)
     self.info[id][key] = v
 end
 
@@ -332,22 +337,16 @@ end
 ---@param key string
 ---@param new string|any a new 'key'
 Scene.set_info_key = function(self, id, key, new)
-    printf("id:%s, k:%s, n:%s",id, key, new)
-    -- 
-
 
     if not self.info[id] then
         self.info[id] = {}
         self.info[id][new] = "..."
-        print"case1"
     elseif self.info[id][new] then
-        print"case4"
         return
     else
         if self.info[id][key] then
             if new~="" then--if new key is empty than delete it
                 self.info[id][new] = self.info[id][key]
-                print"case2"
             end
             self.info[id][key] = nil
             
@@ -359,16 +358,9 @@ Scene.set_info_key = function(self, id, key, new)
             if c==0 then self.info[id] = nil end
         else
             self.info[id][new] = "..."
-            print"case3"
         end
     end
 end
--- Scene.set_info_value = function(self, id, tipo, key, new)
---     if not self.info[id] then
---         return
---     end
---     self.info[id][key] = new
--- end
 
 --Returns a <b>table</b> with one or multiple pars of <i>[ keys ]</i> and <i>[ values ]</i>,</br>
 -- or <b>empty table</b> if there is no info for this ID</br>

@@ -1,5 +1,5 @@
 -- button.lua
-local Inky = require"library.inky"
+local Inky = require"library.Inky"
 local theme = require"ui.theme"
 local lg = love.graphics
 

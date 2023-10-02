@@ -24,7 +24,6 @@ local Inky = {
 		SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
    ]]
 }
-
 ---@module "inky.core.scene"
 Inky.scene = require(PATH .. ".core.scene")
 ---@module "inky.core.pointer"

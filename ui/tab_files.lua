@@ -1,4 +1,4 @@
--- local Inky = require("library.inky")
+-- local Inky = require("library.Inky")
 local label = require("ui.label")
 local lg = love.graphics
 

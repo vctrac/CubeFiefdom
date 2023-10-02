@@ -1,4 +1,4 @@
-local Inky = require("library.inky")
+local Inky = require("library.Inky")
 local slider = require"ui.slider"
 
 local rgb_color = {

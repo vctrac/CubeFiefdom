@@ -1,4 +1,4 @@
-local Inky = require("library.inky")
+local Inky = require("library.Inky")
 local lg = love.graphics
 local label_bar = Inky.defineElement(function(self)
     return function(_, x, y, w, h)

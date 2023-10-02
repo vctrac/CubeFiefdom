@@ -34,11 +34,11 @@ local function val(vt)
     })
     t.update = function(self, magnitude, dt)
         local v = self.v
-        local t = self.t
-        if t~=v then
-            self.v = v-(v-t)*magnitude*dt
-            if math.abs(t-v)<0.001 then
-                self.v=t
+        local tg = self.t
+        if tg~=v then
+            self.v = v-(v-tg)*magnitude*dt
+            if math.abs(tg-v)<0.001 then
+                self.v=tg
             end
         end
     end
@@ -329,10 +329,31 @@ local function get_side(pos, npos)
     return npos
 end
 
+-- local cam = {
+--     theta = val(90),
+--     phi = val(35),
+--     offset = val(10),
+    
+-- }
+
 local cam = {
-    theta = val(90),
-    phi = val(35),
-    offset = val(10),
+    rotating_speed = 10,
+    theta = 90,
+    theta_target = 90,
+    phi = 35,
+    phi_target = 35,
+    offset = 10,
+    offset_target = 10,
+    update = function(self, name, magnitude, dt)
+        local v = self[name]
+        local tg = self[name.."_target"]
+        if tg~=v then
+            self[name] = v-(v-tg)*magnitude*dt
+            if math.abs(tg-v)<0.001 then
+                self[name]=tg
+            end
+        end
+    end
 }
 
 local ZOOM_MAX = 25
@@ -362,7 +383,7 @@ local function pivot_movement(dt)
 
     if moveX ~= 0 or moveY ~= 0 then
         local angle = math.atan2(moveY, moveX)
-        local dir = math.rad(cam.theta()) + angle
+        local dir = math.rad(cam.theta) + angle
         pivot.x = pivot.x + math.cos(dir) * pivot.speed * dt
         pivot.y = pivot.y - math.sin(dir) * pivot.speed * dt
 
@@ -449,7 +470,7 @@ MOUSE.get_cube_under = function( )
         local hit_position = vec3(position)
         
         -- MOUSE.active = true
-        MOUSE.mode = "edit"
+        MOUSE.set_mode("edit")
         local nearest_position = vec3(APP.map.cubes[nearest].position)
         local result_position = get_side(hit_position, nearest_position)
         MOUSE.selected = { new = result_position, id = nearest}
@@ -465,7 +486,7 @@ MOUSE.get_cube_under = function( )
         current_cube:setTranslation(rx,ry,rz)
     else
         -- MOUSE.active = false
-        MOUSE.mode = "wait"
+        MOUSE.set_mode"wait"
     end
 end
 MOUSE.set_texture = function(self, texture_index)
@@ -581,15 +602,14 @@ function love.update(dt)
         camera.movement(dt)
     else
         if MOUSE.mode=="rotating" then
-            cam.theta:update(10,dt)
-            cam.phi:update(10,dt)
+            cam:update("theta", 10,dt)
+            cam:update("phi",10,dt)
         end
-        
-        cam.offset:update(5,dt)
+        cam:update("offset",5,dt)
         if MOUSE.mode~="hud" then
             pivot_movement(dt)
         end
-        camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta.v), math.rad(cam.phi.v), cam.offset.v)
+        camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam.theta), math.rad(cam.phi), cam.offset)
     end
     if APP.toggle.light then
         -- APP.shader:send("lightPosition", light.position)
@@ -606,20 +626,19 @@ end
 function love.draw()
     -- local s = APP.toggle.light and APP.shader
     -- lg.setDepthMode("lequal", false)
-    love.graphics.setColor(1,1,1)
+    lg.setColor(1,1,1)
     sky:draw()
     pivot.model:draw()
     APP.map:draw()
     -- lg.setColor(1,1,1)
     if MOUSE.mode=="edit" then
-        love.graphics.setColor(0,0,0)
-        love.graphics.setWireframe(true)
+        lg.setColor(0,0,0)
+        lg.setWireframe(true)
         current_cube:draw( )
-        love.graphics.setWireframe(false)
+        lg.setWireframe(false)
         if MOUSE.tool=="pencil" then
             lg.setColor(1,1,1)
             -- new_text:draw( )
-            
             lg.setColor(1,1,1,0.6)
             lg.setMeshCullMode( "back" )
             -- for key, selected in pairs(MOUSE.multi) do
@@ -631,15 +650,16 @@ function love.draw()
         end
         
     end
-    -- if not APP.first_person_view then
+    
     if APP.first_person_view then
+        lg.setColor(1,1,1)
         camera_lens:draw()
     else
         hud:draw()
     end
-    love.graphics.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
     -- lg.setColor(1,1,1,1)
-    love.graphics.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
+    lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
 end
 
 function love.keypressed(k)
@@ -665,13 +685,13 @@ function love.keypressed(k)
         if k=="l" then APP.toggle.light = not APP.toggle.light end
         if k=="g" then APP.toggle.grid = not APP.toggle.grid end
         if k=="t" then APP.toggle.texture = not APP.toggle.texture end
-        if k=="y" then
+        if k=="tab" then
             APP.first_person_view = not APP.first_person_view
             love.mouse.setRelativeMode(APP.first_person_view)
             if APP.first_person_view then
                 local cx,cy,cz = unpack(camera.position)
                 camera_lens:setTranslation(cx,cy,cz)
-                camera.lookInDirection(cx,cy,cz, -math.rad(cam.theta.v+90), -math.rad(cam.phi.v))
+                camera.lookInDirection(cx,cy,cz, -math.rad(cam.theta+90), -math.rad(cam.phi))
                 MOUSE.mode = "wait"
             end
         end
@@ -716,7 +736,7 @@ function love.mousereleased(mx,my, b)
     if b==3 then
         -- MOUSE.rotating = false
         -- MOUSE.panning = false
-        MOUSE.mode="wait"
+        MOUSE.set_mode("wait")
         -- love.mouse.setPosition(MOUSE.old_x, MOUSE.old_y)
     elseif MOUSE.mode=="edit" then
         mouse_tools.release[MOUSE.tool](mx,my,b)
@@ -727,8 +747,9 @@ function love.mousereleased(mx,my, b)
 end
 function love.wheelmoved(x,y)
     if not APP.first_person_view then
-        local val = 0.1*cam.offset.t*y
-        cam.offset.t = math.min(ZOOM_MAX,math.max(ZOOM_MIN,cam.offset.t - val))
+        local v = 0.1*cam.offset_target*y
+        cam.offset_target = math.min(ZOOM_MAX,math.max(ZOOM_MIN,cam.offset_target - v))
+        -- MOUSE.set_mode("zooming")
     end
 end
 function love.mousemoved(mx,my, dx,dy)
@@ -736,46 +757,18 @@ function love.mousemoved(mx,my, dx,dy)
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
     elseif MOUSE.mode=="rotating" then
-        cam.theta = cam.theta + dx*0.5
-        cam.phi.t = math.min(89,math.max(-89,cam.phi.t + dy*0.5))
+        cam.theta_target = cam.theta_target + dx*0.5
+        cam.phi_target = math.min(89,math.max(-89,cam.phi_target + dy*0.5))
     elseif MOUSE.mode=="panning" then
         MOUSE.move_x = dx
         MOUSE.move_y = dy
     elseif hud.pointer:doesOverlapElement(hud.window) then
-        MOUSE.mode = "hud"
+        MOUSE.set_mode("hud")
         if (love.mouse.isDown(1)) then
             hud.pointer:setPosition(mx, my)
             hud.pointer:raise("drag", dx, dy)
         end
     else
-        -- local cp = Cpml.vec3(unpack(camera.position))
-        -- local ray = camera.get_mouse_ray()
-
-        -- local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
-        
-        -- if nearest then
-        --     -- print(nearest, unpack(position))
-        --     -- APP.map.cubes[nearest].highlight = true
-        --     local hit_position = vec3(position)
-            
-        --     MOUSE.active = true
-        --     local nearest_position = vec3(APP.map.cubes[nearest].position)
-        --     local result_position = get_side(hit_position, nearest_position)
-        --     MOUSE.selected = { new = result_position, id = nearest}
-            
-        --     local rx,ry,rz = result_position:unpack()
-        --     -- local new_id = To_id({rx,ry,rz})
-        --     -- if not MOUSE.multi[new_id] then
-        --     --     MOUSE.multi[new_id] = {pos={rx,ry,rz},id=nearest}
-        --     -- end
-        --     -- new_text:setTranslation(rx,ry,rz)
-        --     new_cube:setTranslation(rx,ry,rz)
-        --     rx,ry,rz = nearest_position:unpack()
-        --     current_cube:setTranslation(rx,ry,rz)
-        -- else
-        --     MOUSE.active = false
-        -- end
-
         MOUSE.get_cube_under()
     end
 
