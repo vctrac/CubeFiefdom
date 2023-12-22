@@ -130,7 +130,7 @@ local add = function(index, texture_id, position)
     remesh()
     return true
 end
-local remove = function(index)-- beware of the bug!
+local remove = function(index)-- beware of an unknow bug!
     Scene.count = Scene.count-1
 
     -- if Scene.alpha_ids[index] then Scene.alpha_ids[index] = nil end
@@ -179,14 +179,16 @@ Scene.load_file=function(self, data)
     -- self.palette_count = data.palette_count
     self.count = data.count
     self.info = data.info
-    
 
     for _,k in ipairs(data.cubes) do
-        local id = To_id(k.position)
-        local ipos = From_id(k.texture)
+        local kpos = {k[1],k[2],k[3]}
+        local ipos = {k[4], k[5]}
+
+        local id = To_id(kpos)
+        local ktex = To_id(ipos)
         -- local id_type = Id_type(k.texture)
         
-        self.cubes[id] = {uv = ipos, texture = k.texture, position = k.position, dynamic = k.dynamic}
+        self.cubes[id] = {uv = ipos, texture = ktex, position = kpos, dynamic = k[6]}
     end
     -- self.count = #data.cubes
     remesh()
@@ -324,7 +326,7 @@ Scene.add_info = function(self, id, key, value)
     end
 
     local v = value
-    local isBool = string2bool[string.lower(v)]
+    local isBool = string2bool[string.lower(value)]
     if tonumber(v) then
         v = tonumber(v)
     elseif isBool ~=nil then

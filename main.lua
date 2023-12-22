@@ -151,6 +151,12 @@ IMAGE = {
     button_frame = lg.newImage("image/buttons/button_frame.png"),
     new_info_off = lg.newImage("image/buttons/new_info.png"),
     new_info_on = lg.newImage("image/buttons/new_info_on.png"),
+    save_lua_off = lg.newImage("image/buttons/save_lua.png"),
+    save_lua_on = lg.newImage("image/buttons/save_lua_on.png"),
+    save_json_off = lg.newImage("image/buttons/save_json.png"),
+    save_json_on = lg.newImage("image/buttons/save_json_on.png"),
+    save_obj_off = lg.newImage("image/buttons/save_obj.png"),
+    save_obj_on = lg.newImage("image/buttons/save_obj_on.png"),
     pencil = lg.newImage("image/buttons/pencil.png"),
     brush = lg.newImage("image/buttons/brush.png"),
     rotate = lg.newImage("image/buttons/rotate.png"),
@@ -197,6 +203,8 @@ function APP.load_texture(filename)
         end
     end
 end
+
+-- APP.save_lua
 -- function APP.add_quad(id, x, y)
 --     APP.texture[id] = Image_from_quad( APP.texture_atlas, x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE)
 -- end
@@ -329,13 +337,6 @@ local function get_side(pos, npos)
     return npos
 end
 
--- local cam = {
---     theta = val(90),
---     phi = val(35),
---     offset = val(10),
-    
--- }
-
 local cam = {
     rotating_speed = 10,
     theta = 90,
@@ -443,6 +444,17 @@ APP.cube_map_history = function(name) --used for undo and redo features in hud.l
     APP.map[name](APP.map)
 end
 
+APP.save_lua = function()
+    file_handler.save("lua", APP.map, CONFIG.save_name)
+end
+
+APP.save_json = function()
+    file_handler.save("json", APP.map, CONFIG.save_name)
+end
+
+APP.save_obj = function()
+    file_handler.save("obj", APP.map, CONFIG.save_name)
+end
 --------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------
 -- MOUSE state ------------------------------------------------------------------
@@ -676,7 +688,7 @@ function love.keypressed(k)
         elseif k=='y' then
             APP.map:redo()
         elseif k=='s' then
-            file_handler.save("lua", APP.map, CONFIG.save_name)
+            file_handler.save("json", APP.map, CONFIG.save_name)
 
             -- save_atlas()
         end

@@ -3,6 +3,7 @@ local lg = love.graphics
 local Inky = require"library.Inky"
 local theme = require"ui.theme"
 local Tools = require"ui.tab_tools"
+local Files = require"ui.tab_files"
 -- local Button = require"ui.button"
 
 local current_tab = "tools"
@@ -21,15 +22,16 @@ hud.pointer = Inky.pointer(hud.scene)
 
 function hud.switchTab(name)
     print(name)
-    -- current_tab = name
+    current_tab = name
 end
 
+Files.switch_tab = hud.switchTab
 Tools.switch_tab = hud.switchTab
 Tools.start_x = hud.window_pos.z*0.5 -22
 
 local tabs = {
     tools = Tools.element(hud.scene),
-    -- files = Tools.element(hud.scene)
+    files = Files.element(hud.scene)
 }
 
 function hud:update( dt)

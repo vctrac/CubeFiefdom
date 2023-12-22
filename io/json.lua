@@ -3,17 +3,24 @@ local json = require "library.json"
 
 local function save_json( data, filename)
     local save = io.open(filename ..".json", 'w')
-    
+    assert(save, "could not open file")
     local t = {
         version = CONFIG.version,
         app_name = CONFIG.app_name,
-        palette_count = data.palette_count,
-        texture_count = data.texture_count,
+        count = data.count,
+        info = data.info,
         cubes = {}
     }
 
-    for i,k in pairs(data.cubes) do
-        table.insert(t.cubes,{position = k.position , texture_index = k.texture_index})
+    for _,k in pairs(data.cubes) do
+        -- if data.info[k.texture] and not(t.info[k.texture]) then
+        --     t.info[k.texture] = data.info[k.texture]
+        -- end
+        -- table.insert(t.cubes,{position = k.position , texture = k.texture})
+        local coords = {unpack(k.position)}
+        table.insert(coords, k.uv[1])
+        table.insert(coords, k.uv[2])
+        table.insert(t.cubes, coords)
     end
 
     save:write(json.encode(t))
