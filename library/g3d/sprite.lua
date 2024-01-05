@@ -18,83 +18,73 @@ local verts = {
 local pixel_shader = [[
 vec4 effect(vec4 color, Image tex, vec2 texCoords, vec2 screenCoords) {
     vec4 pixel = Texel(tex, texCoords);
+    
     if(pixel.a < 0.1) discard;
     return pixel*color;
 }
 ]]
 
-local horizontal_billboard_shader = love.graphics.newShader( pixel_shader, [[
-    uniform mat4 modelMatrix;
-    uniform mat4 viewMatrix;
-    uniform mat4 projectionMatrix;
-    
-    vec4 position( mat4 transform_projection, vec4 vertex_position ) {
-        mat4 modelView = viewMatrix*modelMatrix;
-        float scale = length(modelMatrix[0]);
+--Shader billboard - got some bugs with canvases
+-- local horizontal_billboard_shader = love.graphics.newShader( pixel_shader, [[
+--     uniform mat4 modelMatrix;
+--     uniform mat4 viewMatrix;
+--     uniform mat4 projectionMatrix;
 
-        // horizontal.
-        modelView[1][0] = -scale; 
-        modelView[1][1] = 0.0; 
-        modelView[1][2] = 0.0;
+--     vec4 position( mat4 transform_projection, vec4 vertex_position ) {
 
-        vec4 P = modelView * vertex_position;
-        return projectionMatrix * P;
-    }
-]])
-local full_billboard_shader = love.graphics.newShader(pixel_shader, [[
-    uniform mat4 modelMatrix;
-    uniform mat4 viewMatrix;
-    uniform mat4 projectionMatrix;
-    
-    vec4 position( mat4 transform_projection, vec4 vertex_position ) {
-        mat4 modelView = viewMatrix*modelMatrix;
-        vec2 scale = vec2(length(modelMatrix[0]), length(modelMatrix[1]));
+--         mat4 modelView = viewMatrix*modelMatrix;
+--         float scale = length(modelMatrix[0]);
 
-        // horizontal.
-        modelView[1][0] = -scale.x; 
-        modelView[1][1] = 0.0; 
-        modelView[1][2] = 0.0;
+--         // horizontal.
+--         modelView[1][0] = -scale; 
+--         modelView[1][1] = 0.0; 
+--         modelView[1][2] = 0.0;
 
-        // vertical.
-        modelView[2][0] = 0.0; 
-        modelView[2][1] = scale.y; 
-        modelView[2][2] = 0.0;
+--         vec4 P = modelView * vertex_position;
+--         return projectionMatrix * P;
+--     }
+-- ]])
+-- local full_billboard_shader = love.graphics.newShader(pixel_shader, [[
+--     uniform mat4 modelMatrix;
+--     uniform mat4 viewMatrix;
+--     uniform mat4 projectionMatrix;
 
-        vec4 P = modelView * vertex_position;
-        return projectionMatrix * P;
-    }
-]])
+--     vec4 position( mat4 transform_projection, vec4 vertex_position ) {
 
-local render = function(self)--,shader)
-    -- local shader = alpha_shader
-    -- love.graphics.setShader(shader)
+--         mat4 modelView = viewMatrix*modelMatrix;
+--         vec2 scale = vec2(length(modelMatrix[0]), length(modelMatrix[1]));
 
-    love.graphics.setShader( self.shader)
-    
-    self.shader:send("modelMatrix", self.matrix)
-    self.shader:send("viewMatrix", cam.viewMatrix)
-    self.shader:send("projectionMatrix", cam.projectionMatrix)
-    
-    love.graphics.draw(self.mesh)
-    love.graphics.setShader()
-end
+--         // horizontal.
+--         modelView[1][0] = -scale.x; 
+--         modelView[1][1] = 0.0; 
+--         modelView[1][2] = 0.0;
+
+--         if (vertical){
+--             modelView[2][0] = 0.0; 
+--             modelView[2][1] = scale.y; 
+--             modelView[2][2] = 0.0;
+--         }
+--         vec4 P = modelView * vertex_position;
+--         return projectionMatrix * P;
+--     }
+-- ]])
 
 --Lua billboard - accepts different pixel shaders
---[[
-local billboard = function(self,shader)
+--[
+local billboard = function(self)
     local vx,vy,vz = cam.getLookVector()
     self.rotation[2] = math.tan( -vz )
     self.rotation[3] = math.atan2( vy, vx )
     self:updateMatrix()
-    render(self,shader)
+    self.render(self)
 end
-local horizontal = function(self,shader)
-    local vx,vy,vz = camera.getLookVector()
+local horizontal = function(self)
+    local vx,vy,_ = cam.getLookVector()
     self.rotation[3] = math.atan2( vy, vx )
     self:updateMatrix()
-    render(self,shader)
+    self.render(self)
 end
---]]
+-- ]]
 
 ---@class settings
 ---@field translation table { x, y, z}
@@ -121,10 +111,14 @@ local function newSprite(texture, settings)
     local sprite = new_model(verts, texture, settings.translation, settings.rotation, settings.scale)
     
     -- billboard shader - defaults to horizontal billboard.
-    sprite.shader = settings.vertical and full_billboard_shader or horizontal_billboard_shader
-    
+    sprite.shader = love.graphics.newShader( pixel_shader, g3d.shaderpath)--settings.shader or billboard_shader--settings.vertical and full_billboard_shader or horizontal_billboard_shader
+    -- if settings.horizontal then
+        -- sprite.shader:send("vertical", false)
+    sprite.render = sprite.draw
+    sprite.draw = settings.horizontal and horizontal or billboard
+    -- end
     -- sprite.draw = settings.disable and render or (settings.vertical and billboard or horizontal)
-    sprite.draw = render
+    -- sprite.draw = render
     return sprite
 end
 

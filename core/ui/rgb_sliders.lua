@@ -1,5 +1,5 @@
 local Inky = require("library.Inky")
-local slider = require"ui.slider"
+local slider = require"core.ui.slider"
 
 local rgb_color = {
     {1,0.2,0.2},

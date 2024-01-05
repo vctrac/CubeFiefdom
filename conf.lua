@@ -15,7 +15,7 @@ function love.conf(t)
     -- t.audio.mixwithsystem = true        -- Keep background music playing when opening LOVE (boolean, iOS and Android only)
  
     -- t.window.title = "Untitled"         -- The window title (string)
-    t.window.icon = "image/ico.png"                 -- Filepath to an image to use as the window's icon (string)
+    t.window.icon = "resource/image/ico.png"                 -- Filepath to an image to use as the window's icon (string)
     t.window.width = 960--480                -- The window width (number)
     t.window.height = 800               -- The window height (number)
     -- t.window.borderless = true         -- Remove all border visuals from the window (boolean)

@@ -1,10 +1,10 @@
 -- hud2.lua
 local lg = love.graphics
 local Inky = require"library.Inky"
-local theme = require"ui.theme"
-local Tools = require"ui.tab_tools"
-local Files = require"ui.tab_files"
--- local Button = require"ui.button"
+local theme = require"core.ui.theme"
+local Tools = require"core.ui.tab_tools"
+local Files = require"core.ui.tab_files"
+-- local Button = require"core.ui.button"
 
 local current_tab = "tools"
 

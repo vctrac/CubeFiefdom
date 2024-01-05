@@ -148,13 +148,16 @@ end
 -- draw the model
 function model:draw(shader)
     local shader = shader or self.shader
-    love.graphics.setShader(shader)
+    
+    -- love.graphics.clear()
     shader:send("modelMatrix", self.matrix)
     shader:send("viewMatrix", camera.viewMatrix)
     shader:send("projectionMatrix", camera.projectionMatrix)
-    -- if shader:hasUniform "isCanvasEnabled" then
-    --     shader:send("isCanvasEnabled", love.graphics.getCanvas() ~= nil)
-    -- end
+    if shader:hasUniform "isCanvasEnabled" then
+        shader:send("isCanvasEnabled", love.graphics.getCanvas() ~= nil)
+    end
+    
+    love.graphics.setShader(shader)
     love.graphics.draw(self.mesh)
     love.graphics.setShader()
 end

@@ -1,12 +1,12 @@
 local nfs = require 'library.nativefs'
 local fh = {}
 do
-    local files = nfs.getDirectoryItemsInfo("io")
+    local files = nfs.getDirectoryItemsInfo("core/io")
     for i = 1, #files do
-    if files[i].type == "file" then
-        local fname = files[i].name:match("(.+)%..+$")
-        fh[fname] = require("io." .. fname)
-    end
+        if files[i].type == "file" then
+            local fname = files[i].name:match("(.+)%..+$")
+            fh[fname] = require("core.io." .. fname)
+        end
     end
 end
 fh.save = function(format, data, name, ...)

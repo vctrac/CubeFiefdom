@@ -1,6 +1,6 @@
 -- button.lua
 local Inky = require"library.Inky"
-local theme = require"ui.theme"
+local theme = require"core.ui.theme"
 local lg = love.graphics
 
 local Button = Inky.defineElement(function(self)
@@ -9,9 +9,9 @@ local Button = Inky.defineElement(function(self)
     end)
     return function(_, x, y, w, h)
         love.graphics.setColor(theme.button[self.props.color])
-        love.graphics.draw(IMAGE.button_frame, x, y)
+        love.graphics.draw(DATA.image.button_frame, x, y)
         love.graphics.setColor(1,1,1)
-        love.graphics.draw(IMAGE[self.props.key], x, y)
+        love.graphics.draw(DATA.image[self.props.key], x, y)
     end
 end)
 
@@ -19,18 +19,18 @@ local function image_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
             love.graphics.setColor(theme.button[self.props.color])
-            love.graphics.draw(IMAGE[self.props.key], x, y)
+            love.graphics.draw(DATA.image[self.props.key], x, y)
         end
     end))(scene)
 
-    button.props.key = name .. "_off"
-    button.props.color = "off"
+    button.props.key = name --.. "_off"
+    button.props.color = "on"
 
     button:onPointerEnter(function(self, pointer)
         self.props.color ="on_over"
     end)
     button:onPointerExit(function(self, pointer)
-        self.props.color = "off"
+        self.props.color = "off_over"
     end)
     button:onPointer("press", function(self)
         self.props.color = "click"

@@ -40,7 +40,7 @@
 -- end
 -- local floor = math.floor
 -- local grid_model = g3d.newModel(CUBE, nil, nil,nil, 1.001)
-local aabb_model = g3d.newModel(CUBE)
+local aabb_model = g3d.newModel(DATA.model.cube)
 aabb_model:generateAABB()
 
 local change_index = 0
@@ -62,7 +62,7 @@ local Scene = {
     info = {},
     model = nil,
     -- alpha_ids = {},
-    -- palette_count = 0,
+    light_shader = love.graphics.newShader(g3d.shaderpath, DATA.shader.lighting),
     count = 0,
 }
 
@@ -377,7 +377,7 @@ Scene.get_info = function(self, id)
 end
 
 Scene.draw = function(self)
-    local s = APP.toggle.light and APP.shader
+    local s = APP.toggle.light and self.light_shader
     local t = APP.toggle.texture
     local g = APP.toggle.grid
     
