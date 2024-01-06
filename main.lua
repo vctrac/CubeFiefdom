@@ -64,40 +64,40 @@ local pivot = {
     x=0, y=0, z=0,
     speed = 10,
     angle = 0,
-    model = nil
+    model = nil,
+    movement = function(self, dt)
+        ---@TODO: mouse panning should move the CUBE_MAP relative to screen (left and right, up and down) like in cubeKingdom
+        local moveX, moveY = 0,0--MOUSE.move_x, MOUSE.move_y
+        local moved = false
+
+        if love.keyboard.isDown "d" then moveX = moveX - 1 end
+        if love.keyboard.isDown "s" then moveY = moveY - 1 end
+        if love.keyboard.isDown "a" then moveX = moveX + 1 end
+        if love.keyboard.isDown "w" then moveY = moveY + 1 end
+        if love.keyboard.isDown "c" then
+            self.z = self.z - self.speed*dt
+            moved = true
+        end
+        if love.keyboard.isDown "space" then
+            self.z = self.z + self.speed*dt
+            moved = true
+        end
+
+        if moveX ~= 0 or moveY ~= 0 then
+            local angle = math.atan2(moveY, moveX)
+            local dir = math.rad(cam_controls.theta) + angle
+            self.x = self.x + math.cos(dir) * self.speed * dt
+            self.y = self.y - math.sin(dir) * self.speed * dt
+
+            moved = true
+        end
+
+        if moved then
+            self.model:setTranslation(self.x,self.y,self.z)
+            sky:setTranslation(self.x,self.y,self.z)
+        end
+    end
 }
-local function pivot_movement(dt)
-    local moveX, moveY = 0,0--MOUSE.move_x, MOUSE.move_y
-    local moved = false
-    if love.keyboard.isDown "d" then moveX = moveX - 1 end
-    if love.keyboard.isDown "s" then moveY = moveY - 1 end
-    if love.keyboard.isDown "a" then moveX = moveX + 1 end
-    if love.keyboard.isDown "w" then moveY = moveY + 1 end
-    if love.keyboard.isDown "c" then
-        pivot.z = pivot.z - pivot.speed*dt
-        moved = true
-    end
-    if love.keyboard.isDown "space" then
-        pivot.z = pivot.z + pivot.speed*dt
-        moved = true
-    end
-
-    if moveX ~= 0 or moveY ~= 0 then
-        local angle = math.atan2(moveY, moveX)
-        local dir = math.rad(cam_controls.theta) + angle
-        pivot.x = pivot.x + math.cos(dir) * pivot.speed * dt
-        pivot.y = pivot.y - math.sin(dir) * pivot.speed * dt
-
-        moved = true
-    end
-
-    if moved then
-        pivot.model:setTranslation(pivot.x,pivot.y,pivot.z)
-        sky:setTranslation(pivot.x,pivot.y,pivot.z)
-    end
-end
-
--- ---@TODO function to load textures
 
 
 --------------------------------------------------------------------------------------
@@ -110,7 +110,7 @@ end
 -- ##     ## ##     ## #### ##    ## 
 --------------------------------------------------------------------------------------
 
-local day_time = 0
+local day_time = 0 --used to control the skysphere shader
 local day_time_multiplier = 1
 
 function love.load(...)
@@ -121,8 +121,8 @@ function love.load(...)
     MOUSE.load()
 
     sky = g3d.newModel(DATA.model.sphere, nil, {0,0,-50}, nil, 500)
-    sky.shader = love.graphics.newShader(g3d.shaderpath, DATA.shader.gradient) --gradient, grid, sky, clouds
-    -- sky.shader:send("Time",11)
+    sky.shader = love.graphics.newShader(g3d.shaderpath, DATA.shader["gradient"]) --gradient, grid, sky, clouds
+    sky.shader:send("Time",5)
 
     camera.sprite = g3d.newSprite(DATA.image["camera"],{scale = 0.5})
     pivot.model = g3d.newSprite(DATA.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
@@ -153,7 +153,7 @@ function love.update(dt)
         end
         cam_controls:update("offset",5,dt)
         if MOUSE.mode~="hud" then
-            pivot_movement(dt)
+            pivot:movement(dt)
         end
         camera.pivot(pivot.x,pivot.y,pivot.z, math.rad(cam_controls.theta), math.rad(cam_controls.phi), cam_controls.offset)
     end
@@ -173,7 +173,6 @@ function love.update(dt)
     lg.setColor(1,1,1)
 
     sky:draw()
-    
     
     APP.map:draw()
 
@@ -203,10 +202,10 @@ function love.draw()
         HUD:draw()
     end
 
-    lg.setColor(1,1,1)
-    lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
-    -- lg.setColor(1,1,1,1)
-    lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
+    ---@DEBUG
+    -- lg.setColor(1,1,1)
+    -- lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    -- lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
     -- lg.printf( day_time, 0, APP.height-24, APP.width,"right")
 end
 
@@ -290,6 +289,9 @@ function love.wheelmoved(x,y)
 end
 function love.mousemoved(mx,my, dx,dy)
     MOUSE.stopped = false
+    
+    
+
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
     elseif MOUSE.mode=="rotating" then
@@ -298,17 +300,15 @@ function love.mousemoved(mx,my, dx,dy)
     elseif MOUSE.mode=="panning" then
         MOUSE.move_x = dx
         MOUSE.move_y = dy
-    elseif HUD.pointer:doesOverlapElement(HUD.window) then
+    elseif HUD.mouse_moved(mx,my) then --MOUSE.mode=="hud" then
         MOUSE.set_mode("hud")
-        if (love.mouse.isDown(1)) then
-            HUD.pointer:setPosition(mx, my)
-            HUD.pointer:raise("drag", dx, dy)
-        end
+        -- if (love.mouse.isDown(1)) then
+        --     HUD.pointer:setPosition(mx, my)
+        --     HUD.pointer:raise("drag", dx, dy)
+        -- end
     else
         MOUSE.get_cube_under()
     end
-
-    HUD.pointer:setPosition(mx, my)
 end
 
 function love.filedropped(file)
@@ -319,6 +319,8 @@ function love.filedropped(file)
 	local ext = string.lower( string.sub( filename:match("%.%w+$"),2))
     
     APP.drop_file(filename, ext)
+
+    ---@TODO: method to load new textures
 end
 
 function love.textinput(t)

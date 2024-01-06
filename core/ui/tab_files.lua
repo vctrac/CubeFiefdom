@@ -189,7 +189,7 @@ Files.element = Inky.defineElement(function(self, scene)
 
         tools_tab:render(x+w, y+64, 20, 60)
         love.graphics.setColor(1,1,1)
-        love.graphics.draw(DATA.image.files_on, x+w, y)
+        love.graphics.draw(DATA.image.files, x+w, y)
 
         --INFO--------------------------------------------------
         info_label:render(x, sy, w, label_height)

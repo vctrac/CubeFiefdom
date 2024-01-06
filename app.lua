@@ -11,7 +11,7 @@ end
 local pixel_scale = 4
 APP = {
     map = require"scene",
-    toggle = {light=true, shader=false, grid=false, texture=true, retro=false},
+    toggle = {light=true, grid=false, texture=true, retro=false},
     atlas = nil,
     texture = {},
     palette = {},
@@ -26,7 +26,7 @@ APP = {
 }
 function APP.load()
     
-    APP.retro_shader = lg.newShader(DATA.shader.scanlines)
+    APP.retro_shader = lg.newShader(DATA.shader.scanlines) --scanlines, dithering
 
     APP.load_texture("tex.png")
     

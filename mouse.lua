@@ -36,6 +36,7 @@ local function sign(number)
     return number > 0 and 1 or (number == 0 and 0 or -1)
 end
 
+-- Pick the side of a cube where the mouse is pointing
 ---@param pos vec3
 ---@param npos vec3
 ---@return vec3 npos
@@ -60,6 +61,10 @@ local function get_side(pos, npos)
     return npos
 end
 
+---@TODO: a way to edit multiple cubes at the same time
+-- maybe holding [ctrl] and dragging and/or left_clicking the mouse
+-- the cubes will be edited after releasing [ctrl]
+-- have to consider how it will work with UNDO/REDO
 
 MOUSE = {
     old_x = 0,
@@ -91,13 +96,10 @@ MOUSE.get_cube_under = function( )
     local ray = camera.get_mouse_ray()
 
     local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
-    -- print(nearest)
+    
     if nearest then
-        -- print(nearest, unpack(position))
-        -- APP.map.cubes[nearest].highlight = true
         local hit_position = vec3(position)
         
-        -- MOUSE.active = true
         MOUSE.set_mode("edit")
         local nearest_position = vec3(APP.map.cubes[nearest].position)
         local result_position = get_side(hit_position, nearest_position)
@@ -113,21 +115,16 @@ MOUSE.get_cube_under = function( )
         rx,ry,rz = nearest_position:unpack()
         current_cube:setTranslation(rx,ry,rz)
     else
-        -- MOUSE.active = false
         MOUSE.set_mode"wait"
     end
 end
 MOUSE.set_texture = function(self, texture_index)
-    -- local it = Id_type(texture_index)
     self.texture = texture_index
-    -- self.texture_type = it
     new_cube.mesh:setTexture(APP["texture"][texture_index])
 
     HUD.load_tool_info(texture_index)
 end
 function MOUSE.draw()
-    -- pivot.model:draw()
-
     if MOUSE.mode=="edit" then
         lg.setColor(0,0,0)
         lg.setWireframe(true)
@@ -171,7 +168,6 @@ local mouse_tools = {
                 APP.map:paint_cube(MOUSE.selected.id, {texture = MOUSE.texture})
             elseif mb==2 then
                 local cube = APP.map:get_cube( MOUSE.selected.id)
-                -- print(cube.texture)
                 if not cube then return end
                 MOUSE:set_texture(cube.texture)
             end

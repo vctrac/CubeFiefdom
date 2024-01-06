@@ -16,14 +16,14 @@ DATA = {
         new_info = lg.newImage(img_bttn.."new_info_on.png"),
 
         --FILES
-        save_lua_off = lg.newImage(img_bttn.."save_lua.png"),
-        save_lua_on = lg.newImage(img_bttn.."save_lua_on.png"),
-        save_json_off = lg.newImage(img_bttn.."save_json.png"),
-        save_json_on = lg.newImage(img_bttn.."save_json_on.png"),
-        save_obj_off = lg.newImage(img_bttn.."save_obj.png"),
-        save_obj_on = lg.newImage(img_bttn.."save_obj_on.png"),
+        -- save_lua_off = lg.newImage(img_bttn.."save_lua.png"),
+        save_lua = lg.newImage(img_bttn.."save_lua_on.png"),
+        -- save_json_off = lg.newImage(img_bttn.."save_json.png"),
+        save_json = lg.newImage(img_bttn.."save_json_on.png"),
+        -- save_obj_off = lg.newImage(img_bttn.."save_obj.png"),
+        save_obj = lg.newImage(img_bttn.."save_obj_on.png"),
 
-        --TOOLS
+        --BUTTONS
         pencil = lg.newImage(img_bttn.."pencil.png"),
         brush = lg.newImage(img_bttn.."brush.png"),
         rotate = lg.newImage(img_bttn.."rotate.png"),
@@ -37,6 +37,9 @@ DATA = {
         texture_on = lg.newImage(img_bttn.."texture.png"),
         redo = lg.newImage(img_bttn.."redo.png"),
         undo = lg.newImage(img_bttn.."undo.png"),
+        ok = lg.newImage(img_bttn.."ok.png"),
+        cancel = lg.newImage(img_bttn.."cancel.png"),
+        discard = lg.newImage(img_bttn.."discard.png"),
         
         --TABS
         tools = lg.newImage(img.."tabs/tools_on.png"),
@@ -52,6 +55,7 @@ DATA = {
     },
     shader = {
         lighting = shader.."lighting.frag",
+        dithering = shader.."dithering.frag",
         scanlines = shader.."scanlines.frag",
         sky = shader.."sky.frag",
         grid = shader.."grid.frag",

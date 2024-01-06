@@ -3,7 +3,7 @@ local Inky = require"library.Inky"
 local theme = require"core.ui.theme"
 local lg = love.graphics
 
-local Button = Inky.defineElement(function(self)
+local framed_button = Inky.defineElement(function(self)
     self:onPointer("press", function(self)
         self.props.color = "click"
     end)
@@ -19,11 +19,11 @@ local function image_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
             love.graphics.setColor(theme.button[self.props.color])
-            love.graphics.draw(DATA.image[self.props.key], x, y)
+            love.graphics.draw(DATA.image[name], x, y)
         end
     end))(scene)
 
-    button.props.key = name --.. "_off"
+    button.props.key = name
     button.props.color = "on"
 
     button:onPointerEnter(function(self, pointer)
@@ -33,17 +33,18 @@ local function image_button(scene, name, fun)
         self.props.color = "off_over"
     end)
     button:onPointer("press", function(self)
+        fun(name)
         self.props.color = "click"
     end)
     button:onPointer("release", function(self)
-        fun(name)
+        -- fun(name)
         self.props.color ="on_over"
     end)
     return button
 end
 
 local function radio_button(scene, name, fun, active)
-    local button = Button(scene)
+    local button = framed_button(scene)
 
     button.props.key = name
     button.props.color = active and "on" or "off"
@@ -63,7 +64,7 @@ local function radio_button(scene, name, fun, active)
 end
 
 local function toggle_button(scene, name, fun)
-    local button = Button(scene)
+    local button = framed_button(scene)
 
     button.props.color = APP.toggle[name] and "on" or "off"
     button.props.key = name..(APP.toggle[name] and "_on" or "_off")
@@ -83,7 +84,7 @@ local function toggle_button(scene, name, fun)
 end
 
 local function edit_button(scene, name, fun)
-    local button = Button(scene)
+    local button = framed_button(scene)
     button.props.key = name
     button.props.color = "off"
     button:onPointerEnter(function(self, pointer)

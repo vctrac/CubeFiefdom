@@ -332,6 +332,7 @@ Scene.add_info = function(self, id, key, value)
     elseif isBool ~=nil then
         v = isBool
     end
+    print(type(key), v )
     self.info[id][key] = v
 end
 

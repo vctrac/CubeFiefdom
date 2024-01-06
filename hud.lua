@@ -69,4 +69,12 @@ end
 hud.keypressed = function(key)
     Tools.keypressed(key)
 end
+hud.mouse_moved = function(x,y)
+    hud.pointer:setPosition(x, y)
+    if hud.pointer:doesOverlapElement(hud.window)
+    or hud.pointer:doesOverlapElement(tabs.tools.props.info_panel) then
+        return true
+    end
+    return false
+end
 return hud
