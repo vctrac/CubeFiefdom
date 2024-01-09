@@ -1,7 +1,7 @@
 function love.conf(t)
     t.console = false
     -- t.window.depth = 24
-    t.window.title = "Cube Fiefdom v0.4"
+    t.window.title = "Cube Fiefdom v0.5"
 
     t.identity = "CubeFiefdom"                    -- The name of the save directory (string)
     t.appendidentity = true            -- Search files in source directory before save directory (boolean)

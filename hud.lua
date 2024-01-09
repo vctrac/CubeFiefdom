@@ -52,11 +52,7 @@ function hud:draw()
 
 end
 hud.load_tool_info = function( id)
-    local info = APP.map:get_info(id)
-    Tools.clear_info()
-    for k,v in pairs(info) do
-        Tools.new_info(hud.scene, id, k, v)
-    end
+    Tools.load_tool_info(hud.scene, id)
 end
 hud.setToolActiveKey = Tools.setToolActiveKey
 hud.new_texture_button = function(name)
@@ -67,12 +63,12 @@ hud.textinput = function(t)
 end
 
 hud.keypressed = function(key)
-    Tools.keypressed(key)
+    Tools:keypressed(key)
 end
 hud.mouse_moved = function(x,y)
     hud.pointer:setPosition(x, y)
     if hud.pointer:doesOverlapElement(hud.window)
-    or hud.pointer:doesOverlapElement(tabs.tools.props.info_panel) then
+    or hud.pointer:doesOverlapElement(Tools.info_panel_dialog) then
         return true
     end
     return false

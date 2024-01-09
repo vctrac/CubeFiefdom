@@ -10,5 +10,11 @@ return {
         on_over = {1,1,1,1},
         off_over = {0.8,0.8,0.8,1},
         click = {1,1,0,1},
+        background = {0,0,0,1},
+    },
+    label = {
+        foreground = {0.45,0.45,0.85},
+        background = {0.1,0.1,0.2},
+        text = {1,1,0.8}
     }
 }

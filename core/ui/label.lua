@@ -1,10 +1,13 @@
-local Inky = require("library.Inky")
-local lg = love.graphics
-local label_bar = Inky.defineElement(function(self)
+local i = require("library.Inky")
+local t = require"core.ui.theme"
+local g = love.graphics
+local l = i.defineElement(function(self)
     return function(_, x, y, w, h)
-        lg.setColor(self.props.color)
-        lg.rectangle("fill",x,y,w,h)
-        lg.setColor(1,1,1)
-        lg.printf(self.props.text,x,y,w,"center")
+        g.setColor(t.label.background)
+        g.rectangle("fill",x,y,w,h)
+        g.setColor(t.label.text)
+        g.printf(self.props.text,x,y,w,"center")
     end
 end)
+
+return l

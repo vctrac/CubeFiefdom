@@ -14,7 +14,18 @@ local framed_button = Inky.defineElement(function(self)
         love.graphics.draw(DATA.image[self.props.key], x, y)
     end
 end)
-
+local function label_button(scene, k, a, f)
+    local lb= Inky.defineElement(function(self)
+        return function(_, x, y, w, h)
+            lg.setColor(theme.label.foreground)
+            lg.rectangle("fill",x,y,w,h)
+            lg.setColor(theme.label.text)
+            lg.printf( k, x,y,w,a)
+        end
+    end)(scene)
+    lb:onPointer("release", f)
+    return lb
+end
 local function image_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
@@ -105,7 +116,7 @@ local function texture_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
             if self.props.active or self.props.selected then
-                lg.setColor(0,0,0,1)
+                lg.setColor(theme.button.background)
                 local s = 1.25
                 local sp = TILE_SIZE*0.125
                 lg.rectangle("fill", x-sp-1,y-sp-1,w*s+2,h*s+2)
@@ -133,6 +144,7 @@ return {
     radio= radio_button,
     toggle = toggle_button,
     edit = edit_button,
-    texture = texture_button
+    texture = texture_button,
+    label = label_button
 }
 

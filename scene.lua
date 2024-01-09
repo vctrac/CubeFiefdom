@@ -316,7 +316,9 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     end
     return n, p
 end
+
 local string2bool = {["true"]=true, ["false"]=false}
+
 ---@param id string
 ---@param key string
 ---@param value any
@@ -332,26 +334,40 @@ Scene.add_info = function(self, id, key, value)
     elseif isBool ~=nil then
         v = isBool
     end
-    print(type(key), v )
+    -- print(type(key), v )
     self.info[id][key] = v
 end
 
 ---@param id string
 ---@param key string
----@param new string|any a new 'key'
-Scene.set_info_key = function(self, id, key, new)
+Scene.remove_info = function(self, id, key)
+    if not (self.info[id] or self.info[id][key]) then
+        return
+    end
+    self.info[id][key]=nil
+end
 
+---@param id string
+---@param key string
+---@param new string a new 'key'
+---@param value? any optional
+Scene.set_info_key = function(self, id, old, new, value)
+    local old_key = tostring(old)
+    local new_key = tostring(new)
     if not self.info[id] then
-        self.info[id] = {}
-        self.info[id][new] = "..."
-    elseif self.info[id][new] then
+        -- self.info[id] = {}
+        -- self.info[id][new] = value or "..."
+        self:add_info(id, new_key, value or "...")
+    elseif self.info[id][new_key] then
         return
     else
-        if self.info[id][key] then
-            if new~="" then--if new key is empty than delete it
-                self.info[id][new] = self.info[id][key]
+        if self.info[id][old_key] then
+            if new_key~="" then--if new_key key is empty than delete it
+                -- print"here"
+                -- self.info[id][new_key] = value or self.info[id][key]
+                self:add_info(id, new_key, value or self.info[id][old_key])
             end
-            self.info[id][key] = nil
+            self.info[id][old_key] = nil
             
             --check if there is no more info for this tile
             local c = 0
@@ -360,7 +376,8 @@ Scene.set_info_key = function(self, id, key, new)
             end
             if c==0 then self.info[id] = nil end
         else
-            self.info[id][new] = "..."
+            -- self.info[id][new_key] = value or "..."
+            self:add_info(id, new_key, value or "...")
         end
     end
 end
@@ -375,6 +392,18 @@ Scene.get_info = function(self, id)
         return self.info[id]
     end
     return {}
+end
+
+---@param id string
+---@param key string
+---@return any value
+Scene.get_info_key = function(self, id, key)
+    if key~=nil and self.info[id] then
+        if self.info[id][key] then
+            return self.info[id][key]
+        end
+    end
+    return false
 end
 
 Scene.draw = function(self)
