@@ -4,7 +4,6 @@ local Inky = require"library.Inky"
 local theme = require"core.ui.theme"
 local Tools = require"core.ui.tab_tools"
 local Files = require"core.ui.tab_files"
--- local Button = require"core.ui.button"
 
 local current_tab = "tools"
 
@@ -39,32 +38,20 @@ function hud:update( dt)
 end
 function hud:draw()
     local x, y, w, h = hud.window_pos:unpack()
-    -- lg.setColor(theme.tab.active_color)
-    -- lg.rectangle("fill", x, y, w, h)
     
     lg.setColor(1,1,1)
     self.scene:beginFrame()
     self.window:render(x, y, w, h)
     tabs[current_tab]:render( x, y, w, h)
-    -- button_tools:render(x+w,y,25,25)
-    -- button_files:render(x+w,y+25,25,25)
     self.scene:finishFrame()
-
 end
 hud.load_tool_info = function( id)
     Tools.load_tool_info(hud.scene, id)
 end
-hud.setToolActiveKey = Tools.setToolActiveKey
 hud.new_texture_button = function(name)
     return Tools.setTextureButtons(hud.scene, name)
 end
-hud.textinput = function(t)
-    Tools:textinput(t)
-end
 
-hud.keypressed = function(key)
-    Tools:keypressed(key)
-end
 hud.mouse_moved = function(x,y)
     hud.pointer:setPosition(x, y)
     if hud.pointer:doesOverlapElement(hud.window)
@@ -73,4 +60,11 @@ hud.mouse_moved = function(x,y)
     end
     return false
 end
+
+
+hud.setToolActiveKey = Tools.setToolActiveKey
+hud.textinput = Tools.textinput
+hud.keypressed = Tools.keypressed
+hud.keyreleased = Tools.keyreleased
+
 return hud

@@ -2,7 +2,6 @@
 local utf8 = require("utf8")
 local Inky = require"library.Inky"
 local Button = require"core.ui.button"
-local Theme = require"core.ui.Theme"
 local Info_button = require"core.ui.info_label_button"
 local Gradient_Label = require"core.ui.gradient_label"
 local button_size = 22
@@ -28,7 +27,6 @@ local function text_field_active( i)
         field.props.active = index==i
     end
 end
-
 
 local function Text_input(name, scene)
     local e = Inky.defineElement(function(self)
@@ -98,7 +96,7 @@ local function info_input_box(scene)
             lg.setColor(0.2,0.2,0.2)
             lg.rectangle("fill", x,y,w,h)
             lg.setColor(1,1,1)
-            lg.printf("name:", x, y, w, "left")
+            lg.printf("variable name:", x, y, w, "left")
             local yy = y+btn_size+4
             --txt_input
             text_inputs.info.key:render(x,yy,w,btn_size)
@@ -175,29 +173,38 @@ Tools.setTextureButtons = function(scene, name)
     texture_buttons[index].props.y = ipos[2]*TILE_SIZE
 end
 
-Tools.textinput = function(self, t)
-    if self.active_info_text.name then
+Tools.textinput = function( t)
+    if Tools.active_info_text.name then
         local txt = Tools.active_info_text.props.txt
         local len = utf8.len(txt)
-        -- local byteoffset = utf8.offset(txt, -1)
-    --     -- print(bytecount, byteoffset)
         if len==9 then
             txt = string.sub(txt,1, len-1)
         end
-        self.active_info_text.props.txt = txt .. t
+        Tools.active_info_text.props.txt = txt .. t
     end
 end
-Tools.keypressed = function(self, key)
-    -- if key then print(key) end
+Tools.keypressed = function( key)
     if key == "backspace" then
-        local txt = self.active_info_text.props.txt
+        local txt = Tools.active_info_text.props.txt
         local len = utf8.len(txt)
         if len>0 then
-            self.active_info_text.props.txt = string.sub(txt, 1, len - 1)
+            Tools.active_info_text.props.txt = string.sub(txt, 1, len - 1)
         end
     -- elseif key == "return" then
     end
+    if key=="lalt" and not APP.first_person_view then
+        local k = MOUSE.tool=="pencil" and "brush" or "pencil"
+        Tools.setToolActiveKey(k)
+    end
 end
+
+Tools.keyreleased = function( key)
+    if key=="lalt" then
+        local k = MOUSE.tool=="pencil" and "brush" or "pencil"
+        Tools.setToolActiveKey(k)
+    end
+end
+
 Tools.element = Inky.defineElement(function(self, scene)
     local files_tab = Button.button(scene, "files", Tools.switch_tab)
 
@@ -247,6 +254,7 @@ Tools.element = Inky.defineElement(function(self, scene)
 
         --LABEL-----------------------------------------------
         tools_label:render(x, y, w, label_height)
+
         --TOOLS-----------------------------------------------
         lg.setColor(1,1,1)
         local sx = x+Tools.start_x
@@ -264,6 +272,7 @@ Tools.element = Inky.defineElement(function(self, scene)
         texture_label:render(x, sy, w, label_height)
         sx = x+4
         sy = sy+label_height*2
+
         --TEXTURES----------------------------------------------
         lg.setColor(1,1,1)
         lg.draw(APP.texture_atlas, sx, sy)
@@ -274,12 +283,13 @@ Tools.element = Inky.defineElement(function(self, scene)
         sy = sy+texture_atlas_size+button_size
         lg.draw(APP.texture[MOUSE.texture],sx,sy,0,4,4)
 
-        sy = sy+texture_atlas_size
+        sy = sy+button_size*4
+
         --LABEL----------------------------------------------
         infos_label:render(x, sy, w, label_height)
         sy = sy+label_height+5
-        --INFO--------------------------------------------------
 
+        --INFO--------------------------------------------------
         for _,lb in pairs(Tools.info) do
             lb:render(x, sy, w, label_height)
             sy = sy+label_height+1

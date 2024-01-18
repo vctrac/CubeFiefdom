@@ -119,6 +119,11 @@ local function remesh()
     Scene.model:makeNormals()
 
 end
+-- Add a new cube to the cubes table array
+---@function add
+---@param index string
+---@param texture_id string
+---@param position table
 local add = function(index, texture_id, position)
     local ipos = From_id(texture_id)
     
@@ -130,6 +135,7 @@ local add = function(index, texture_id, position)
     remesh()
     return true
 end
+
 local remove = function(index)-- beware of an unknow bug!
     Scene.count = Scene.count-1
 
@@ -197,13 +203,26 @@ Scene.refresh = function(self)
     remesh()
 end
 
-Scene.add_cube = function(self, texture_id, position)
-    local index = To_id(position)
+-- Add a new cube to the cubes table array
+---@function add_cube
+---@param texture_id string
+---@param x integer
+---@param y integer
+---@param z integer
+---@return boolean 
+Scene.add_cube = function(self, texture_id, x, y, z)
+    local pos = {x,y,z}
+    local index = To_id(pos)
     if self.cubes[index] then return false end
     
-    add_change( {"add",index,texture_id})
-    return add(index, texture_id, position) 
+    add_change({"add",index,texture_id})
+    return add(index, texture_id, pos)
 end
+
+-- Remove a cube from the cubes table array
+---@function add_cube
+---@param id string
+---@return boolean
 Scene.remove_cube = function(self, id)
     if self.count==1 then return false end
     -- print(self.count)
@@ -215,7 +234,7 @@ Scene.remove_cube = function(self, id)
     else
         return false
     end
-
+    if not self.cubes[index] then return false end
     local texture_id = tostring(self.cubes[index].texture)
     add_change({"remove",index,texture_id})
     remove(index)

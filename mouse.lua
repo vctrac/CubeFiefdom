@@ -2,14 +2,6 @@ local lg = love.graphics
 local camera = g3d.camera
 local new_cube, current_cube --, new_text
 
--- CPML 3D Vector
----@class vec3:Cpml
----@field x number
----@field y number
----@field z number
----@module 'vec3'
-local vec3 = Cpml.vec3
-
 -- create the mesh for the block cursor
 do
     local a = -0.505
@@ -153,7 +145,7 @@ local mouse_tools = {
                     --     APP.map:add_cube( MOUSE.texture, selected.pos)
                     -- end
                     -- MOUSE.multi = {}
-                    APP.map:add_cube( MOUSE.texture, {MOUSE.selected.new:unpack()})
+                    APP.map:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
                 elseif mb==2 then
                     if APP.map:remove_cube(MOUSE.selected.id) then
                         MOUSE.mode = "wait"
