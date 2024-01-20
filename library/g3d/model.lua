@@ -2,6 +2,7 @@
 -- september 2021
 -- MIT license
 
+---@module ".matrices"
 local newMatrix = require(g3d.path .. ".matrices")
 local loadObjFile = require(g3d.path .. ".objloader")
 local collisions = require(g3d.path .. ".collisions")
@@ -13,7 +14,9 @@ local vectorNormalize = vectors.normalize
 ----------------------------------------------------------------------------------------------------
 -- define a model class
 ----------------------------------------------------------------------------------------------------
-
+---@class model
+---@field texture love.Image
+---@field matrix matrix
 local model = {}
 model.__index = model
 
@@ -35,6 +38,13 @@ end
 -- this returns a new instance of the model class
 -- a model must be given a .obj file or equivalent lua table, and a texture
 -- translation, rotation, and scale are all 3d vectors and are all optional
+---@function
+---@param verts table|string
+---@param texture? love.Image|string
+---@param translation? table
+---@param rotation? table
+---@param scale? table|number
+---@return model
 local function newModel(verts, texture, translation, rotation, scale)
     local self = setmetatable({}, model)
 
@@ -46,13 +56,16 @@ local function newModel(verts, texture, translation, rotation, scale)
 
     -- if texture is a string, use it as a path to an image file
     -- otherwise texture is already an image, so don't bother
-    if type(texture) == "string" then
-        texture = love.graphics.newImage(texture)
+    if texture then
+        if type(texture) == "string" then
+            self.texture  = love.graphics.newImage(texture)
+        else
+            self.texture = texture
+        end
     end
 
     -- initialize my variables
     self.verts = verts
-    self.texture = texture
     self.mesh = love.graphics.newMesh(self.vertexFormat, self.verts, "triangles")
     self.mesh:setTexture(self.texture)
     self.matrix = newMatrix()
@@ -93,6 +106,9 @@ function model:setTransform(translation, rotation, scale)
 end
 
 -- move given one 3d vector
+---@param tx number
+---@param ty number
+---@param tz number
 function model:setTranslation(tx,ty,tz)
     self.translation[1] = tx
     self.translation[2] = ty
@@ -102,6 +118,9 @@ end
 
 -- rotate given one 3d vector
 -- using euler angles
+---@param rx number
+---@param ry number
+---@param rz number
 function model:setRotation(rx,ry,rz)
     self.rotation[1] = rx
     self.rotation[2] = ry
@@ -111,6 +130,10 @@ function model:setRotation(rx,ry,rz)
 end
 
 -- create a quaternion from an axis and an angle
+---@param x number
+---@param y number
+---@param z number
+---@param angle number
 function model:setAxisAngleRotation(x,y,z,angle)
     x,y,z = vectorNormalize(x,y,z)
     angle = angle / 2
@@ -146,8 +169,8 @@ function model:updateMatrix()
 end
 
 -- draw the model
-function model:draw(shader)
-    local shader = shader or self.shader
+function model:draw(s)
+    local shader = s or self.shader
     
     -- love.graphics.clear()
     shader:send("modelMatrix", self.matrix)

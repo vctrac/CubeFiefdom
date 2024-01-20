@@ -23,6 +23,7 @@ APP = {
     canvas_small = nil,
     canvas_normal = nil,
     pixel_scale = 1,
+    selected_tool = "pencil"
 }
 function APP.load()
     

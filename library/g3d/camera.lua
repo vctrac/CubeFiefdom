@@ -19,8 +19,6 @@ local rad90 = math.rad(90)
 local key = love.keyboard.isDown
 
 ---@class camera
----@field pivot function pivot the camera around a point
----@field getDirectionPitch function return direction, pitch
 local camera = {
     fov = math.pi/2,
     nearClip = 0.01,
@@ -72,6 +70,9 @@ end
 -- end
 
 -- convenient function to return the camera's normalized look vector
+---@return number vx
+---@return number vy
+---@return number vz
 function camera.getLookVector()
     local vx = camera.target[1] - camera.position[1]
     local vy = camera.target[2] - camera.position[2]

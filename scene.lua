@@ -252,7 +252,7 @@ Scene.get_cube = function(self,id)
     end
     return self.cubes[index]
 end
-Scene.paint_cube = function(self, id, tab)
+Scene.paint_cube = function(self, id, texture)
     local index
     if type(id)=="string" then
         index = id
@@ -263,9 +263,9 @@ Scene.paint_cube = function(self, id, tab)
     end
     if not self.cubes[index] then return false end
 
-    if tab.texture and tab.texture~=self.cubes[index].texture then
-        add_change({"paint",index, tab.texture, self.cubes[index].texture})
-        return paint(index, tab.texture)
+    if texture and texture~=self.cubes[index].texture then
+        add_change({"paint",index, texture, self.cubes[index].texture})
+        return paint(index, texture)
     end
 end
 Scene.redo = function(self)
@@ -360,16 +360,17 @@ end
 ---@param id string
 ---@param key string
 Scene.remove_info = function(self, id, key)
-    if not (self.info[id] or self.info[id][key]) then
-        return
+    if not(self.info[id] and self.info[id][key]) then
+        return false
     end
     self.info[id][key]=nil
+    return true
 end
 
 ---@param id string
----@param key string
----@param new string a new 'key'
----@param value? any optional
+---@param old string
+---@param new string
+---@param value? any
 Scene.set_info_key = function(self, id, old, new, value)
     local old_key = tostring(old)
     local new_key = tostring(new)

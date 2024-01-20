@@ -96,8 +96,11 @@ local function info_input_box(scene)
             lg.setColor(0.2,0.2,0.2)
             lg.rectangle("fill", x,y,w,h)
             lg.setColor(1,1,1)
-            lg.printf("variable name:", x, y, w, "left")
+            lg.printf(string.format("[ %s ]",MOUSE.texture), x, y, w, "center")
+
             local yy = y+btn_size+4
+            lg.printf("variable name:", x, yy, w, "left")
+            yy = yy+btn_size+4
             --txt_input
             text_inputs.info.key:render(x,yy,w,btn_size)
             yy = yy+btn_size+4
@@ -151,7 +154,7 @@ Tools.new_info = function( scene, key, value)
 end
 
 Tools.setToolActiveKey = function(key)
-    MOUSE.tool = key
+    APP.selected_tool = key
     for i=1,2 do
         local you = tool_buttons[1][i].props.key==key
         tool_buttons[1][i].props.color = you and "on" or "off"
@@ -192,18 +195,18 @@ Tools.keypressed = function( key)
         end
     -- elseif key == "return" then
     end
-    if key=="lalt" and not APP.first_person_view then
-        local k = MOUSE.tool=="pencil" and "brush" or "pencil"
-        Tools.setToolActiveKey(k)
-    end
+    -- if key=="lalt" and not APP.first_person_view then
+    --     local k = APP.selected_tool=="pencil" and "brush" or "pencil"
+    --     Tools.setToolActiveKey(k)
+    -- end
 end
 
-Tools.keyreleased = function( key)
-    if key=="lalt" then
-        local k = MOUSE.tool=="pencil" and "brush" or "pencil"
-        Tools.setToolActiveKey(k)
-    end
-end
+-- Tools.keyreleased = function( key)
+--     if key=="lalt" then
+--         local k = APP.selected_tool=="pencil" and "brush" or "pencil"
+--         Tools.setToolActiveKey(k)
+--     end
+-- end
 
 Tools.element = Inky.defineElement(function(self, scene)
     local files_tab = Button.button(scene, "files", Tools.switch_tab)

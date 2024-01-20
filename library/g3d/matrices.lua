@@ -12,17 +12,15 @@ local vectorNormalize = vectors.normalize
 ----------------------------------------------------------------------------------------------------
 -- matrices are 16 numbers in table, representing a 4x4 matrix like so:
 --
--- |  1   2   3   4  |
--- |                 |
--- |  5   6   7   8  |
--- |                 |
--- |  9   10  11  12 |
--- |                 |
--- |  13  14  15  16 |
-
+-- |&emsp;1&emsp;2&emsp;3&emsp;4 |<br>
+-- |&emsp;5&emsp;6&emsp;7&emsp;8 |<br>
+-- |&emsp;9&ensp;10&ensp;11&ensp;12 |<br>
+-- |&ensp;13&ensp;14&ensp;15&ensp;16 |<br>
+---@class matrix
 local matrix = {}
 matrix.__index = matrix
 
+---@return matrix
 local function newMatrix()
     local self = setmetatable({}, matrix)
 

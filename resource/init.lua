@@ -37,6 +37,8 @@ DATA = {
         texture_on = lg.newImage(img_bttn.."texture.png"),
         redo = lg.newImage(img_bttn.."redo.png"),
         undo = lg.newImage(img_bttn.."undo.png"),
+        redo_on = lg.newImage(img_bttn.."redo_on.png"),
+        undo_on = lg.newImage(img_bttn.."undo_on.png"),
         ok = lg.newImage(img_bttn.."ok.png"),
         cancel = lg.newImage(img_bttn.."cancel.png"),
         discard = lg.newImage(img_bttn.."discard.png"),
@@ -65,5 +67,3 @@ DATA = {
 }
 DATA.image.grid_off = DATA.image.grid_on
 DATA.image.texture_off = DATA.image.texture_on
-DATA.image.undo_off = DATA.image.undo
-DATA.image.redo_off = DATA.image.redo

@@ -13,7 +13,7 @@
    /\____/
    \_/__/
 --]]
-
+---@class g3d
 g3d = {
     _VERSION     = "g3d 1.5.2",
     _DESCRIPTION = "Simple and easy 3D engine for LÖVE.",
@@ -53,12 +53,26 @@ g3d.shader = love.graphics.newShader(g3d.shaderpath, [[
       return pixel*color;
   }
 ]])
+
+
+---@module '.model'
 g3d.newModel = require(g3d.path .. ".model")
+
+---@module '.camera'
 g3d.camera = require(g3d.path .. ".camera")
+
+---@module '.sprite'
 g3d.newSprite = require(g3d.path .. ".sprite")
+
+---@module '.collisions'
 g3d.collisions = require(g3d.path .. ".collisions")
+
+---@module '.objloader'
 g3d.loadObj = require(g3d.path .. ".objloader")
+
+---@module '.vectors'
 g3d.vectors = require(g3d.path .. ".vectors")
+
 g3d.camera.updateProjectionMatrix()
 g3d.camera.updateViewMatrix()
 

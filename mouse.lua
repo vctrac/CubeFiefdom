@@ -122,7 +122,7 @@ function MOUSE.draw()
         lg.setWireframe(true)
         current_cube:draw( )
         lg.setWireframe(false)
-        if MOUSE.tool=="pencil" then
+        if APP.selected_tool=="pencil" then
             lg.setColor(1,1,1,0.6)
             lg.setMeshCullMode( "back" )
             -- for key, selected in pairs(MOUSE.multi) do
@@ -157,7 +157,7 @@ local mouse_tools = {
             if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                APP.map:paint_cube(MOUSE.selected.id, {texture = MOUSE.texture})
+                APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
             elseif mb==2 then
                 local cube = APP.map:get_cube( MOUSE.selected.id)
                 if not cube then return end
@@ -176,9 +176,9 @@ local mouse_tools = {
 }
 
 function MOUSE.pressed(x,y,b)
-    mouse_tools.press[MOUSE.tool](x,y,b)
+    mouse_tools.press[APP.selected_tool](x,y,b)
 end
 function MOUSE.released(x,y,b)
-    mouse_tools.release[MOUSE.tool](x,y,b)
+    mouse_tools.release[APP.selected_tool](x,y,b)
     MOUSE.get_cube_under()
 end

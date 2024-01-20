@@ -85,16 +85,17 @@ local horizontal = function(self)
     self.render(self)
 end
 -- ]]
+-- -@type (table | number)
 
 ---@class settings
----@field translation table { x, y, z}
----@field rotation table { x, y, z}
----@field scale number | table number or { x, y, z}
----@field vertical boolean true for full billboard or false for horizontal billboard
+---@field translation ?table { x, y, z}
+---@field rotation ?table { x, y, z}
+---@field scale ?(table | number) or { x, y, z}
+---@field horizontal ?boolean true for full billboard or false for horizontal billboard
 
----@param texture userdata
+---@param texture love.Image
 ---@param settings settings
----@return table sprite
+---@return model model
 local function newSprite(texture, settings)
     settings = settings or {}
     
@@ -107,19 +108,19 @@ local function newSprite(texture, settings)
     --     local s = settings.scale or 1
     --     scale = {s,s,-s}
     end
-
-    local sprite = new_model(verts, texture, settings.translation, settings.rotation, settings.scale)
+    
+    local model = new_model(verts, texture, settings.translation, settings.rotation, settings.scale)
     
     -- billboard shader - defaults to horizontal billboard.
-    sprite.shader = love.graphics.newShader( pixel_shader, g3d.shaderpath)--settings.shader or billboard_shader--settings.vertical and full_billboard_shader or horizontal_billboard_shader
+    model.shader = love.graphics.newShader( pixel_shader, g3d.shaderpath)--settings.shader or billboard_shader--settings.vertical and full_billboard_shader or horizontal_billboard_shader
     -- if settings.horizontal then
-        -- sprite.shader:send("vertical", false)
-    sprite.render = sprite.draw
-    sprite.draw = settings.horizontal and horizontal or billboard
+        -- model.shader:send("vertical", false)
+    model.render = model.draw
+    model.draw = settings.horizontal and horizontal or billboard
     -- end
-    -- sprite.draw = settings.disable and render or (settings.vertical and billboard or horizontal)
-    -- sprite.draw = render
-    return sprite
+    -- model.draw = settings.disable and render or (settings.vertical and billboard or horizontal)
+    -- model.draw = render
+    return model
 end
 
 return newSprite

@@ -24,12 +24,12 @@ Cpml = require"library.cpml"
 ---@module 'vec3'
 vec3 = Cpml.vec3
 
--- CPML 2D Vector
----@class vec2:Cpml
----@field x number
----@field y number
----@module 'vec2'
-vec2 = Cpml.vec2
+-- -- CPML 2D Vector
+-- ---@class vec2:Cpml
+-- ---@field x number
+-- ---@field y number
+-- ---@module 'vec2'
+-- vec2 = Cpml.vec2
 
 ---@module 'g3d'
 require"library.g3d"
@@ -85,15 +85,15 @@ local pivot = {
         local moveX, moveY = 0,0--MOUSE.move_x, MOUSE.move_y
         local moved = false
 
-        if keydown "d" then moveX = moveX - 1 end
-        if keydown "s" then moveY = moveY - 1 end
-        if keydown "a" then moveX = moveX + 1 end
-        if keydown "w" then moveY = moveY + 1 end
-        if keydown "c" then
+        if keydown"right" then moveX = moveX - 1 end
+        if keydown"down" then moveY = moveY - 1 end
+        if keydown"left" then moveX = moveX + 1 end
+        if keydown"up" then moveY = moveY + 1 end
+        if keydown "pagedown" then
             self.z = self.z - self.speed*dt
             moved = true
         end
-        if keydown "space" then
+        if keydown "pageup" then
             self.z = self.z + self.speed*dt
             moved = true
         end
@@ -114,51 +114,105 @@ local pivot = {
     end
 }
 
--- local current_cube
+
+---@param id string
+---@param translation table
+local function edit(id, translation)
+    local has_cube = APP.map:get_cube( id)
+    if has_cube then
+        if APP.selected_tool == "pencil" then
+            APP.map:remove_cube( id)
+        elseif APP.selected_tool == "brush" then
+            APP.map:paint_cube( id, MOUSE.texture)
+        end
+    else
+        APP.map:add_cube( MOUSE.texture, unpack( translation))
+    end
+end
 
 
-local move_keys = {up={0,1}, down={0,-1}, left={1,0}, right={-1,0}}
+---@param id string
+---@param translation table
+local function edit2(id, translation)
+    local has_cube = APP.map:get_cube( id)
+    if APP.selected_tool == "pencil" then
+        if has_cube then
+            APP.map:remove_cube( id)
+        else
+            APP.map:add_cube( MOUSE.texture, unpack( translation))
+        end
+    elseif APP.selected_tool == "brush" then
+        if has_cube then
+            APP.map:paint_cube( id, MOUSE.texture)
+        end
+    end
+end
+
+local move_keys = {w={0,1,0}, a={1,0,0}, s={0,-1,0}, d={-1,0,0}, q={0,0,-1}, e={0,0,1}}
 
 local selected = {
     translation = {0,0,0},
-    direction = {0,0}, --vec2(),
+    direction = {0,0,0}, --vec2(),
     id = To_id({0,0,0}),
-    movement = function(self, dt)
-        local rpz = math.round(pivot.z)
-        if rpz~=self.translation[3] then
-            self.translation[3] = rpz
+    hold = false,
+    multiple = { list_of_ids = {}},
+    movement = function(self)
+        -- if self.moved then
+            local rx, ry, rz = unpack( self.direction)
+            if not(rx==0 and ry==0) then
+                local angle = math.atan2(ry, rx)
+                local dir = math.rad(cam_controls.theta) + angle
+                self.translation[1] = self.translation[1] +math.round(math.cos(dir))
+                self.translation[2] = self.translation[2] -math.round(math.sin(dir))
+                -- print(table.concat(self.translation, ':'))
+            end
+            self.translation[3] = self.translation[3] +rz
             self.cube:setTranslation(unpack(self.translation))
+            -- self.moved = false
             self.id = To_id(self.translation)
+            if self.hold then
+                
+                if not self.multiple.list_of_ids[ self.id] then
+                    self.multiple.list_of_ids[ self.id] = true
+                    table.insert(self.multiple, {id = self.id, translation = {unpack(self.translation)}})
+                    print(#self.multiple)
+                end
+            end
+        -- end
+    end,
+    input_press = function(self, key)
+        if move_keys[key] then
+            self.direction = move_keys[key]
+            -- self.moved = true
+            self:movement()
         end
-        if self.moved then
-            local rx, ry = unpack( self.direction)
-            local angle = math.atan2(ry, rx)
-            local dir = math.rad(cam_controls.theta) + angle
-
-            self.translation[1] = self.translation[1] +math.round(math.cos(dir))
-            self.translation[2] = self.translation[2] -math.round(math.sin(dir))
-            self.cube:setTranslation(unpack(self.translation))
-            self.moved = false
-            self.id = To_id(self.translation)
+        if key =='space' then
+            self.hold = true
+            edit2(self.id, self.translation)
         end
     end,
-    input = function(self, key)
-        if move_keys[key] then
-            self.direction = move_keys[key]--vec2(unpack(move_keys[key]))
-            self.moved = true
+    input_release = function(self, key)
+        if key =='space' then
+            if self.hold then
+                for i=1,#self.multiple do
+                    edit2(self.multiple[i].id, self.multiple[i].translation)
+                end
+                self.hold = false
+                self.multiple = {list_of_ids = {}}
+            end
         end
-        if key =='e' then
-            print(self.id, unpack(self.translation))
-            APP.map:add_cube( MOUSE.texture, unpack(self.translation))
-        elseif key=='x' then
-            print(self.id, unpack(self.translation))
-            APP.map:remove_cube(self.id)
-        end
-
     end,
     draw = function(self)
-        lg.setColor(1,1,1)
         lg.setWireframe(true)
+        if self.hold then
+            lg.setColor(1,1,1,0.1)
+            for i=1,#self.multiple do
+                self.cube:setTranslation(unpack(self.multiple[i].translation))
+                self.cube:draw( )
+            end
+            self.cube:setTranslation(unpack(self.translation))
+        end
+        lg.setColor(1,1,1)
         self.cube:draw( )
         lg.setWireframe(false)
     end
@@ -238,7 +292,7 @@ function love.update(dt)
         camera.movement(dt)
     else
         if MOUSE.mode~="hud" then
-            selected:movement(dt)
+            -- selected:movement()
             if Key.ctrl then
                 MOUSE.set_mode"rotating"
             end
@@ -312,11 +366,11 @@ function love.keypressed(k)
     elseif MOUSE.mode~="hud" then
         -- if k=="n" then APP.map:clear() end
         
-        if k=="l" then APP.toggle.light = not APP.toggle.light end
-        if k=="g" then APP.toggle.grid = not APP.toggle.grid end
-        if k=="t" then APP.toggle.texture = not APP.toggle.texture end
-        if k=="up" then day_time_multiplier = day_time_multiplier+1
-        elseif k=="down" then day_time_multiplier = day_time_multiplier-1 end
+        -- if k=="l" then APP.toggle.light = not APP.toggle.light end
+        -- if k=="g" then APP.toggle.grid = not APP.toggle.grid end
+        -- if k=="t" then APP.toggle.texture = not APP.toggle.texture end
+        -- if k=="up" then day_time_multiplier = day_time_multiplier+1
+        -- elseif k=="down" then day_time_multiplier = day_time_multiplier-1 end
         if k=="tab" then
             APP.first_person_view = not APP.first_person_view
             love.mouse.setRelativeMode(APP.first_person_view)
@@ -327,22 +381,26 @@ function love.keypressed(k)
                 MOUSE.set_mode"wait"
             end
         end
-        if not APP.first_person_view then
-            selected:input(k)
-        end
+        
         -- if k=="lalt" and not APP.first_person_view then
-        --     local key = MOUSE.tool=="pencil" and "brush" or "pencil"
+        --     local key = APP.selected_tool=="pencil" and "brush" or "pencil"
         --     HUD.setToolActiveKey(key)
         -- end
+    end
+    if not APP.first_person_view then
+        selected:input_press(k)
     end
     HUD.keypressed(k)
 end
 function love.keyreleased(k)
     if k=="lalt" then
-        local key = MOUSE.tool=="pencil" and "brush" or "pencil"
+        local key = APP.selected_tool=="pencil" and "brush" or "pencil"
         HUD.setToolActiveKey(key)
     elseif k=="lctrl" then
         MOUSE.set_mode"wait"
+    end
+    if not APP.first_person_view then
+        selected:input_release(k)
     end
 end
 
