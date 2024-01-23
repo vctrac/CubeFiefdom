@@ -14,7 +14,9 @@ return {
     },
     label = {
         foreground = {0.45,0.45,0.85},
-        background = {0.1,0.1,0.2},
+        highlight = {0.2,0.2,0.3},
+        click = {0.3,0.3,0.2},
+        background = {0.165,0.165,0.165,1},
         text = {1,1,0.8}
     }
 }

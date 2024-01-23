@@ -13,15 +13,6 @@ DATA = {
         center = lg.newImage(img.."center.png"),
         -- new_text = lg.newImage(img.."new_text.png"),
         button_frame = lg.newImage(img_bttn.."button_frame.png"),
-        new_info = lg.newImage(img_bttn.."new_info_on.png"),
-
-        --FILES
-        -- save_lua_off = lg.newImage(img_bttn.."save_lua.png"),
-        save_lua = lg.newImage(img_bttn.."save_lua_on.png"),
-        -- save_json_off = lg.newImage(img_bttn.."save_json.png"),
-        save_json = lg.newImage(img_bttn.."save_json_on.png"),
-        -- save_obj_off = lg.newImage(img_bttn.."save_obj.png"),
-        save_obj = lg.newImage(img_bttn.."save_obj_on.png"),
 
         --BUTTONS
         pencil = lg.newImage(img_bttn.."pencil.png"),
@@ -42,10 +33,8 @@ DATA = {
         ok = lg.newImage(img_bttn.."ok.png"),
         cancel = lg.newImage(img_bttn.."cancel.png"),
         discard = lg.newImage(img_bttn.."discard.png"),
-        
-        --TABS
-        tools = lg.newImage(img.."tabs/tools_on.png"),
-        files = lg.newImage(img.."tabs/files_on.png"),
+        minimize = lg.newImage(img_bttn.."minimize.png"),
+        minimize_on = lg.newImage(img_bttn.."minimize_on.png"),
 
         --WORLD
         skysphere = lg.newImage(img.."skysphere.png"),

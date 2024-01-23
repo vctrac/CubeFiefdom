@@ -148,7 +148,7 @@ local mouse_tools = {
                     APP.map:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
                 elseif mb==2 then
                     if APP.map:remove_cube(MOUSE.selected.id) then
-                        MOUSE.mode = "wait"
+                        MOUSE.set_mode"wait"
                     end
                 end
             end

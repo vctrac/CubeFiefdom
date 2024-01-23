@@ -14,23 +14,36 @@ local framed_button = Inky.defineElement(function(self)
         love.graphics.draw(DATA.image[self.props.key], x, y)
     end
 end)
-local function label_button(scene, k, a, f)
+local function label_button(scene, text, align, f)
     local lb= Inky.defineElement(function(self)
+        self.props.color = "background"
         return function(_, x, y, w, h)
-            lg.setColor(theme.label.foreground)
+            lg.setColor(theme.label[self.props.color])
             lg.rectangle("fill",x,y,w,h)
             lg.setColor(theme.label.text)
-            lg.printf( k, x,y,w,a)
+            lg.printf( text, x,y,w,align)
         end
     end)(scene)
-    lb:onPointer("release", f)
+    lb:onPointerEnter(function(self, pointer)
+        self.props.color ="highlight"
+    end)
+    lb:onPointerExit(function(self, pointer)
+        self.props.color = "background"
+    end)
+    lb:onPointer("press", function(self)
+        self.props.color = "click"
+    end)
+    lb:onPointer("release", function(self)
+        f()
+        self.props.color ="highlight"
+    end)
     return lb
 end
 local function image_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
             love.graphics.setColor(theme.button[self.props.color])
-            love.graphics.draw(DATA.image[name], x, y)
+            love.graphics.draw(DATA.image[self.props.key], x, y)
         end
     end))(scene)
 
@@ -44,7 +57,7 @@ local function image_button(scene, name, fun)
         self.props.color = "off_over"
     end)
     button:onPointer("press", function(self)
-        fun(name)
+        fun(self, name)
         self.props.color = "click"
     end)
     button:onPointer("release", function(self)

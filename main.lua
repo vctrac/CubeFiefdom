@@ -119,22 +119,6 @@ local pivot = {
 ---@param translation table
 local function edit(id, translation)
     local has_cube = APP.map:get_cube( id)
-    if has_cube then
-        if APP.selected_tool == "pencil" then
-            APP.map:remove_cube( id)
-        elseif APP.selected_tool == "brush" then
-            APP.map:paint_cube( id, MOUSE.texture)
-        end
-    else
-        APP.map:add_cube( MOUSE.texture, unpack( translation))
-    end
-end
-
-
----@param id string
----@param translation table
-local function edit2(id, translation)
-    local has_cube = APP.map:get_cube( id)
     if APP.selected_tool == "pencil" then
         if has_cube then
             APP.map:remove_cube( id)
@@ -171,11 +155,10 @@ local selected = {
             -- self.moved = false
             self.id = To_id(self.translation)
             if self.hold then
-                
                 if not self.multiple.list_of_ids[ self.id] then
                     self.multiple.list_of_ids[ self.id] = true
                     table.insert(self.multiple, {id = self.id, translation = {unpack(self.translation)}})
-                    print(#self.multiple)
+                    -- print(#self.multiple)
                 end
             end
         -- end
@@ -188,17 +171,21 @@ local selected = {
         end
         if key =='space' then
             self.hold = true
-            edit2(self.id, self.translation)
+            edit(self.id, self.translation)
         end
     end,
     input_release = function(self, key)
         if key =='space' then
             if self.hold then
-                for i=1,#self.multiple do
-                    edit2(self.multiple[i].id, self.multiple[i].translation)
+                local count = #self.multiple
+                for i=1,count do
+                    edit(self.multiple[i].id, self.multiple[i].translation)
                 end
                 self.hold = false
-                self.multiple = {list_of_ids = {}}
+                for i=1,count do
+                    self.multiple[i] = nil
+                end
+                self.multiple.list_of_ids = {}
             end
         end
     end,
@@ -310,7 +297,7 @@ function love.update(dt)
         APP.map.light_shader:send("lightPosition", APP.first_person_view and camera.sprite.translation or camera.position)
     end
 
-    HUD:update(dt)
+    -- HUD:update(dt)
     -- MOUSE.stopped = true
 
     --- Draw to Canvas ---
@@ -346,15 +333,20 @@ function love.draw()
     end
 
     ---@DEBUG
-    -- lg.setColor(1,1,1)
-    -- lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    lg.setColor(1,1,1)
+    lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
     -- lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
     -- lg.printf( day_time, 0, APP.height-24, APP.width,"right")
 end
 
 function love.keypressed(k)
-    if k=="escape" then
-        love.event.quit()
+    -- if k=="escape" then
+    --     love.event.quit()
+    -- end
+    
+    HUD.keypressed(k)
+    if MOUSE.mode=="hud_dialog" then
+        return
     end
     if Key.ctrl then
         if k=='z' then
@@ -445,7 +437,8 @@ end
 function love.mousemoved(mx,my, dx,dy)
     -- print(dx,dy)
     -- MOUSE.stopped = false
-
+    HUD.mouse_moved(mx,my)
+    if MOUSE.mode=="hud_dialog" then return end
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
     elseif MOUSE.mode=="rotating" then
@@ -454,14 +447,13 @@ function love.mousemoved(mx,my, dx,dy)
     -- elseif MOUSE.mode=="panning" then
     --     MOUSE.move_x = dx
     --     MOUSE.move_y = dy
-    elseif HUD.mouse_moved(mx,my) then --MOUSE.mode=="hud" then
-        MOUSE.set_mode("hud")
-        -- if (love.mouse.isDown(1)) then
-        --     HUD.pointer:setPosition(mx, my)
-        --     HUD.pointer:raise("drag", dx, dy)
-        -- end
     else
-        MOUSE.get_cube_under()
+        local over,obj = HUD.is_overlaping()
+        if over then
+            MOUSE.set_mode(obj)
+        else
+            MOUSE.get_cube_under()
+        end
     end
 end
 
@@ -478,7 +470,7 @@ function love.filedropped(file)
 end
 
 function love.textinput(t)
-    if MOUSE.mode=="hud" then
+    if MOUSE.mode=="hud_dialog" then
         HUD.textinput(t)
     end
 end
