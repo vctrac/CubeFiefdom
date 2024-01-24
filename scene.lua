@@ -360,7 +360,7 @@ end
 ---@param id string
 ---@param key string
 Scene.remove_info = function(self, id, key)
-    if not(self.info[id] and self.info[id][key]) then
+    if not(self.info[id] and self.info[id][key]~=nil) then
         return false
     end
     self.info[id][key]=nil

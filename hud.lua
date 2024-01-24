@@ -13,9 +13,9 @@ Tools.start_x = hud.window_pos.z*0.5 -22
 
 local tools = Tools.element(hud.scene)
 
--- function hud:update( dt)
---     return
--- end
+function hud:update( dt)
+    return
+end
 function hud:draw()
     
     local x, y, w, h = hud.window_pos:unpack()

@@ -5,6 +5,8 @@
 ---@module ".matrices"
 local newMatrix = require(g3d.path .. ".matrices")
 local loadObjFile = require(g3d.path .. ".objloader")
+-- -@module ".collisions"
+---@class collisions "collisions"
 local collisions = require(g3d.path .. ".collisions")
 local vectors = require(g3d.path .. ".vectors")
 local camera = require(g3d.path .. ".camera")
@@ -14,7 +16,7 @@ local vectorNormalize = vectors.normalize
 ----------------------------------------------------------------------------------------------------
 -- define a model class
 ----------------------------------------------------------------------------------------------------
----@class model
+---@class model:collisions
 ---@field texture love.Image
 ---@field matrix matrix
 local model = {}
@@ -35,12 +37,12 @@ for key,value in pairs(collisions) do
     model[key] = value
 end
 
--- this returns a new instance of the model class
--- a model must be given a .obj file or equivalent lua table, and a texture
--- translation, rotation, and scale are all 3d vectors and are all optional
+-- This returns a new instance of the model class.<br>
+-- A model must be given a .obj file or equivalent lua table, and a texture.<br>
+-- Translation, rotation, and scale are all 3d vectors and are all optional.
 ---@function
 ---@param verts table|string
----@param texture? love.Image|string
+---@param texture? love.Image|string|love.Canvas
 ---@param translation? table
 ---@param rotation? table
 ---@param scale? table|number

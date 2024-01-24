@@ -5,4 +5,4 @@
  The plan is to create a map making tool for 3d games made in löve+G3d.
 
  # Images
-![Screenshot v0.1 initial release](/screenshot/image01.png)
+![Screenshot v0.1 initial release](/screenshot/image02.png)

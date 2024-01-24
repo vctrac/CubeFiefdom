@@ -7,22 +7,25 @@ local Info_button = require"core.ui.info_label_button"
 local Gradient_Label = require"core.ui.gradient_label"
 local button_size = 22
 local label_height = 16
-local tool_buttons = {}
-local texture_buttons = {}
+local text_inputs = { info = {}}
+-- local Tools.buttons = {}
+-- local texture_buttons = {}
 local lg = love.graphics
+local blinking_cursor_timer = 0
 
 local Tools = {
     start_x = 4,
     start_y = button_size,
     -- integer indexed table
+    buttons = {},
+    texture_buttons = {},
     info = {},
     info_count = 0,
     active_info_text = {},
-    switch_tab = nil
+    switch_tab = nil,
 }
-local text_inputs = {
-    info = {}
-}
+
+
 
 local function text_field_active( i)
     for index,field in pairs(text_inputs.info) do
@@ -58,6 +61,14 @@ local function ok_pressed()
     -- print"ok"
     local tik = text_inputs.info.key.props
     local tiv = text_inputs.info.value.props
+
+    -- remove whitespace characters
+    tik.old_txt = string.gsub(tik.old_txt, "%s", "")
+    tik.txt = string.gsub(tik.txt, "%s", "")
+    tiv.txt = string.gsub(tiv.txt, "%s", "")
+
+    if #tik.txt==0 then return end
+    if #tiv.txt==0 then tiv.txt = "false" end
     if tik.txt ~= tik.old_txt then
         APP.map:set_info_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
         Tools.load_tool_info(Tools.scene, MOUSE.texture)
@@ -159,24 +170,24 @@ end
 Tools.setToolActiveKey = function(key)
     APP.selected_tool = key
     for i=1,2 do
-        local you = tool_buttons[1][i].props.key==key
-        tool_buttons[1][i].props.color = you and "on" or "off"
-        tool_buttons[1][i].props.activeKey = key
+        local you = Tools.buttons[1][i].props.key==key
+        Tools.buttons[1][i].props.color = you and "on" or "off"
+        Tools.buttons[1][i].props.activeKey = key
     end
 end
 Tools.setTextureButtons = function(scene, name)
-    local index = #texture_buttons+1
-    texture_buttons[index] = Button.texture(scene, name, function(n)
-        for i=1,#texture_buttons do
-            texture_buttons[i].props.selected = false
+    local index = #Tools.texture_buttons+1
+    Tools.texture_buttons[index] = Button.texture(scene, name, function(n)
+        for i=1,#Tools.texture_buttons do
+            Tools.texture_buttons[i].props.selected = false
         end
         MOUSE:set_texture(n)
         return n==name
     end)
     local ipos = From_id(name)
 
-    texture_buttons[index].props.x = ipos[1]*TILE_SIZE
-    texture_buttons[index].props.y = ipos[2]*TILE_SIZE
+    Tools.texture_buttons[index].props.x = ipos[1]*TILE_SIZE
+    Tools.texture_buttons[index].props.y = ipos[2]*TILE_SIZE
 end
 
 Tools.textinput = function( t)
@@ -211,122 +222,16 @@ Tools.keypressed = function( key)
     end
 end
 
-local function minimize_button( scene, props)
-    return Button.button(scene, "minimize", function(btn)
-        props.show = not props.show
-        if props.show then
-            props.height = props.max_height
-            btn.props.key = "minimize"
-        else
-            props.height = label_height+4
-            btn.props.key = "minimize_on"
-        end
-    end)
-end
+
+local minimize_button = require"core.ui.minimize_button"
 ----------------------------------------------------------------------------FILES WINDOW
-local files_window = Inky.defineElement(function(self, scene)
-    local files_label = Gradient_Label(scene, "FILES")
-    local save_lua = Button.label(scene, "save as lua", "left", APP.save_lua)
-    local save_json = Button.label(scene, "save as json", "left", APP.save_json)
-    local save_obj = Button.label(scene, "save as obj", "left", APP.save_obj)
-    self.props.show = true
-    self.props.height = label_height*5
-    self.props.max_height = label_height*5
-    local minimize_btn = minimize_button( scene, self.props)
-    local minimize_btn_size = 16
-    return function(_,x,y,w,h)
-        lg.setColor(theme.tab.active_color)
-        lg.rectangle("fill", x, y, w, self.props.height)
-        files_label:render(x, y, w, h)
-        minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
-        if self.props.show then
-            local sy = y+label_height+4
-            save_lua:render(x, sy, w, label_height)
-            sy = sy+label_height+4
-            save_json:render(x, sy, w, label_height)
-            sy = sy+label_height+4
-            save_obj:render(x, sy, w, label_height)
-        end
-    end
-end)
+local files_panel = require"core.ui.files_panel"
 ----------------------------------------------------------------------------TOOLS WINDOW
-local tools_window = Inky.defineElement(function(self, scene)
-    tool_buttons[1] = {
-        Button.radio(scene, "pencil", Tools.setToolActiveKey, true),
-        Button.radio(scene, "brush", Tools.setToolActiveKey)
-    }
-    tool_buttons[2] = {
-        Button.toggle(scene, "texture", APP.option_toggle),
-        Button.toggle(scene, "grid", APP.option_toggle),
-    }
-    tool_buttons[3] = {
-        Button.toggle(scene, "light", APP.option_toggle),
-        Button.toggle(scene, "retro", APP.option_toggle),
-    }
-    tool_buttons[4] = {
-        Button.edit(scene, "undo", APP.cube_map_history),
-        Button.edit(scene, "redo", APP.cube_map_history),
-    }
-    self.props.show = true
-    self.props.height = (#tool_buttons+1)*button_size
-    self.props.max_height = (#tool_buttons+1)*button_size
-
-    local tools_label = Gradient_Label(scene, "TOOLS")
-    local minimize_btn = minimize_button( scene, self.props)
-    local minimize_btn_size = 16
-    return function(_,x,y,w,h)
-        lg.setColor(theme.tab.active_color)
-        lg.rectangle("fill", x, y, w, self.props.height)
-        tools_label:render(x, y, w, h)
-        minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
-        if self.props.show then
-            lg.setColor(1,1,1)
-            local sx = x+w*0.5-button_size
-            local sy = y+h+4
-            for row=1,#tool_buttons do
-                local yy = sy+button_size*(row-1)
-                for column=1,#tool_buttons[row] do
-                    local xx = sx+button_size*(column-1)
-                    tool_buttons[row][column]:render(xx, yy, button_size, button_size)
-                end
-            end
-        end
-    end
-end)
+local tools_panel = require"core.ui.tools_panel"
 ----------------------------------------------------------------------------TEXTURE WINDOW
-local texture_window = Inky.defineElement(function(self, scene)
-    local texture_label = Gradient_Label(scene, "TEXTURE")
-    local texture_atlas_size = TILE_SIZE*8 --tileset_height
-    local current_texture_x = TILE_SIZE*2
-    
-    self.props.show = true
-    self.props.height = texture_atlas_size*2
-    self.props.max_height = texture_atlas_size*2
-
-    local minimize_btn = minimize_button( scene, self.props)
-    local minimize_btn_size = 16
-    return function(_,x,y,w,h)
-        lg.setColor(theme.tab.active_color)
-        lg.rectangle("fill", x, y, w, self.props.height)
-        texture_label:render(x, y, w, h)
-        minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
-        if self.props.show then
-            local sx = x+4
-            local sy = y+h+4
-            
-            lg.setColor(1,1,1)
-            lg.draw(APP.texture_atlas, sx, sy)
-            for _,tex in ipairs(texture_buttons) do
-                tex:render(sx+tex.props.x, sy+tex.props.y, TILE_SIZE, TILE_SIZE)
-            end
-            sx = x+w*0.5 - current_texture_x
-            sy = sy+texture_atlas_size+button_size
-            lg.draw(APP.texture[MOUSE.texture],sx,sy,0,4,4)
-        end
-    end
-end)
+local textures_panel = require"core.ui.textures_panel"
 ----------------------------------------------------------------------------INFO WINDOW
-local info_window = Inky.defineElement(function(self, scene)
+local info_panel = Inky.defineElement(function(self, scene)
     local infos_label = Gradient_Label(scene, "TILE INFO")
     local add_info = Button.label(scene, "new", "center",function()
         text_field_active( "key")
@@ -337,7 +242,7 @@ local info_window = Inky.defineElement(function(self, scene)
     self.props.height = label_height*2.5
     self.props.max_height = label_height*2.5
     self.props.show = true
-    local minimize_btn = minimize_button( scene, self.props)
+    local minimize_btn = minimize_button( scene, self.props, label_height+4)
     local minimize_btn_size = 16
     return function(_,x,y,w,h)
         lg.setColor(theme.tab.active_color)
@@ -365,10 +270,11 @@ Tools.element = Inky.defineElement(function(self, scene)
     Tools.info_panel_dialog:render(1,1,1,1)
     Tools.scene = scene
 
-    local files = files_window(scene)
-    local tool = tools_window(scene)
-    local texture = texture_window(scene)
-    local info = info_window(scene)
+    local files = files_panel(Tools, button_size, label_height)
+    -- local files = files_panel(scene)
+    local tool = tools_panel(Tools, button_size, label_height)
+    local texture = textures_panel(Tools, button_size, label_height)
+    local info = info_panel(scene)
 
     local info_panel_height = 128
     return function(_,x,y,w,h)

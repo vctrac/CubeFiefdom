@@ -1,8 +1,5 @@
----@TODO: 
----@Implement:
-    --a selection cube that can be moved in 3D space by pressing wasd/arrow keys, this selection cube enable the edit of the overlaping cube.
-    --a minimize button in each Label Dock
+---@TODO:
     --a Options Dock where one can toggle especific cube parameters
-
-    --BUGS
-    --don't add a new info if either key or value text field is empty
+    --mouse panning and better pivot controls
+    --Game Objects placements (like doors, items, enemies, etc)
+    --Dynamic cubes should not be included in the exported save.obj

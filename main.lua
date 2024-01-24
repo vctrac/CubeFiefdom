@@ -333,8 +333,8 @@ function love.draw()
     end
 
     ---@DEBUG
-    lg.setColor(1,1,1)
-    lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    -- lg.setColor(1,1,1)
+    -- lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
     -- lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
     -- lg.printf( day_time, 0, APP.height-24, APP.width,"right")
 end
