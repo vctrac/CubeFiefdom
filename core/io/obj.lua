@@ -1,6 +1,6 @@
 local format = string.format
 local abs = math.abs
-local function save_obj(data, name, flip)
+local function save_obj(map, name, flip)
 
     local txt = "mtllib "..name..".mtl"
     txt = txt .."\no "..name
@@ -14,7 +14,7 @@ local function save_obj(data, name, flip)
     local v, f = {}, {}
     local vn, vt = {}, {}
 
-    for i,m in ipairs(data.model.verts) do
+    for i,m in ipairs(map.model.verts) do
         -- to avoid -0 values
         local x = m[1]==0 and 0 or m[1]
         local y = m[2]==0 and 0 or m[2]

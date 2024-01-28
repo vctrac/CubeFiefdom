@@ -1,7 +1,14 @@
 do local _={
     version="0.4",
     count=180,
-    info={},
+    info = {
+        ["1:7"]={type="water",walkable=false},
+        ["2:0"]={type="stone"},
+        ["3:1"]={type="wood",breakable=true},
+        ["7:3"]={type="leaves"},
+        ["0:4"]={type="grass"},
+        ["3:5"]={type="wood",breakable=true}
+    },
     app_name="Cube Fiefdom",
     cubes={
         {3,-1,1,2,0},{4,2,-1,5,4},{4,0,-1,5,4},{4,-7,-1,1,7},{1,2,1,2,0},

@@ -70,10 +70,10 @@ local function ok_pressed()
     if #tik.txt==0 then return end
     if #tiv.txt==0 then tiv.txt = "false" end
     if tik.txt ~= tik.old_txt then
-        APP.map:set_info_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
+        APP.info:set_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
         Tools.load_tool_info(Tools.scene, MOUSE.texture)
     else
-        APP.map:add_info(MOUSE.texture, tik.txt, tiv.txt)
+        APP.info.add(MOUSE.texture, tik.txt, tiv.txt)
         Tools.new_info(Tools.scene, tik.txt, tiv.txt)
     end
     Tools.info_panel_dialog.props.visible = false
@@ -99,7 +99,7 @@ local function info_input_box(scene)
         end)
         local btn_discard = Button.button(scene, "discard", function()
             -- print"discard"
-            APP.map:remove_info(MOUSE.texture, text_inputs.info.key.props.txt)
+            APP.info.remove(MOUSE.texture, text_inputs.info.key.props.txt)
             Tools.load_tool_info(scene, MOUSE.texture)
             self.props.visible = false
             text_inputs:clear()
@@ -147,7 +147,7 @@ end
 
 Tools.load_tool_info = function(scene, id)
     Tools.clear_info()
-    local info = APP.map:get_info(id)
+    local info = APP.info.get(id)
     for k,v in pairs(info) do
         Tools.new_info(scene, k, v)
     end
@@ -169,7 +169,7 @@ end
 
 Tools.setToolActiveKey = function(key)
     APP.selected_tool = key
-    for i=1,2 do
+    for i=1,#Tools.buttons[1] do
         local you = Tools.buttons[1][i].props.key==key
         Tools.buttons[1][i].props.color = you and "on" or "off"
         Tools.buttons[1][i].props.activeKey = key
@@ -224,13 +224,13 @@ end
 
 
 local minimize_button = require"core.ui.minimize_button"
-----------------------------------------------------------------------------FILES WINDOW
+----------------------------------------------------------------------------FILES PANEL
 local files_panel = require"core.ui.files_panel"
-----------------------------------------------------------------------------TOOLS WINDOW
+----------------------------------------------------------------------------TOOLS PANEL
 local tools_panel = require"core.ui.tools_panel"
-----------------------------------------------------------------------------TEXTURE WINDOW
+----------------------------------------------------------------------------TEXTURE PANEL
 local textures_panel = require"core.ui.textures_panel"
-----------------------------------------------------------------------------INFO WINDOW
+----------------------------------------------------------------------------INFO PANEL
 local info_panel = Inky.defineElement(function(self, scene)
     local infos_label = Gradient_Label(scene, "TILE INFO")
     local add_info = Button.label(scene, "new", "center",function()
@@ -247,21 +247,47 @@ local info_panel = Inky.defineElement(function(self, scene)
     return function(_,x,y,w,h)
         lg.setColor(theme.tab.active_color)
         lg.rectangle("fill", x, y, w, self.props.height)
-        infos_label:render(x, y, w, h)
+        infos_label:render(x, y, w, label_height)
         minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
         if self.props.show then
-            local sy = y+h+4
+            y = y+label_height+4
             local count = 2.5
             for _,lb in pairs(Tools.info) do
-                lb:render(x, sy, w-5, label_height)
-                sy = sy+label_height+1
+                lb:render(x, y, w-5, label_height)
+                y = y+label_height+1
                 count = count+1
             end
             self.props.height = count*label_height
-            sy = sy+1
+            y = y+1
             --draw add_info button
-            add_info:render(x, sy, w, label_height)
+            add_info:render(x, y, w, label_height)
         end
+    end
+end)
+----------------------------------------------------------------------------OBJECT PANEL
+local object_panel = Inky.defineElement(function(self, scene)
+    local infos_label = Gradient_Label(scene, "OBJECT INFO")
+    
+    self.props.height = label_height*2.5
+    self.props.max_height = label_height*2.5
+    self.props.show = true
+    local minimize_btn = minimize_button( scene, self.props, label_height+4)
+    local minimize_btn_size = 16
+    return function(_,x,y,w,h)
+        lg.setColor(theme.tab.active_color)
+        lg.rectangle("fill", x, y, w, self.props.height)
+        infos_label:render(x, y, w, label_height)
+        minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
+        -- if self.props.show then
+            -- y = y+label_height+4
+            -- local count = 2.5
+            -- for _,lb in pairs(Tools.info) do
+            --     lb:render(x, y, w-5, label_height)
+            --     y = y+label_height+1
+            --     count = count+1
+            -- end
+            -- self.props.height = count*label_height
+        -- end
     end
 end)
 ----------------------------------------------------------------------------DRAW EVERYTHING
@@ -271,33 +297,37 @@ Tools.element = Inky.defineElement(function(self, scene)
     Tools.scene = scene
 
     local files = files_panel(Tools, button_size, label_height)
-    -- local files = files_panel(scene)
     local tool = tools_panel(Tools, button_size, label_height)
     local texture = textures_panel(Tools, button_size, label_height)
     local info = info_panel(scene)
+    local object = object_panel(scene)
 
     local info_panel_height = 128
     return function(_,x,y,w,h)
         local sy = y
 
         --FILES-----------------------------------------------
-        files:render(x, sy, w, label_height)
+        files:render(x, sy, w, h)
         sy = sy + files.props.height
 
         --TOOLS-----------------------------------------------
-        tool:render(x, sy, w, label_height)
+        tool:render(x, sy, w, h)
         sy = sy + tool.props.height
 
-        --TEXTURES----------------------------------------------
-        texture:render(x, sy, w, label_height)
+        --TEXTURES--------------------------------------------
+        texture:render(x, sy, w, h)
         sy = sy + texture.props.height
 
-        --INFO--------------------------------------------------
-        info:render(x, sy, w, label_height)
+        --INFO------------------------------------------------
+        info:render(x, sy, w, h)
         sy = sy + info.props.height
 
+        --OBJECT----------------------------------------------
+        object:render(x, sy, w, h)
+        sy = sy + object.props.height
+
         if Tools.info_panel_dialog.props.visible then
-            Tools.info_panel_dialog:render(x+w+5, sy, w, info_panel_height)
+            Tools.info_panel_dialog:render(x+w+5, y+h-info_panel_height, w, info_panel_height)
         end
 
         self.props.height = sy

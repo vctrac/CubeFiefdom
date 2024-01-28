@@ -36,11 +36,15 @@ function camera.getDirectionPitch()
     return direction, pitch
 end
 
+function camera.resizeScreen(w,h)
+    camera.aspectRatio = w / h
+    camera.updateProjectionMatrix()
+end
 
 ---@param theta? number in radians
 ---@param phi? number in radians
 ---@return table forward_vector
-function camera.get_forward_vector(theta, phi)
+function camera.getForwardVector(theta, phi)
     theta = theta or direction
     phi = phi or pitch
 
@@ -88,7 +92,7 @@ end
 
 
 ---@return vec3 world_coord
-function camera.get_mouse_ray()
+function camera.getMouseRay()
     --https://love2d.org/forums/viewtopic.php?p=240466#p240466
 
 	-- viewport space
@@ -97,7 +101,7 @@ function camera.get_mouse_ray()
 
 	-- normalized device space
 	local normalized_x = 2 * mouse_x / width  - 1
-	local normalized_y = 2 * mouse_y / height - 1 
+	local normalized_y = 2 * mouse_y / height - 1
 
 	-- clip space
 	local clip_coord = {normalized_x, -normalized_y, 1, 0}
@@ -105,8 +109,8 @@ function camera.get_mouse_ray()
 	-- eye space
 	local inverted_projection = mat4():invert(camera.projectionMatrix)
     local eye_coord = inverted_projection*clip_coord
-	eye_coord[3]    = -1
-	eye_coord[4]    = 0
+	eye_coord[3] = -1
+	eye_coord[4] = 0
 
 	-- world space
     local viewMatrix = mat4(camera.viewMatrix)
@@ -121,12 +125,12 @@ function camera.get_mouse_ray()
 end
 
 -- pivot the camera around a point
----@param target_x number #
----@param target_y number #
----@param target_z number #
----@param distance number #
+---@param target_x number
+---@param target_y number
+---@param target_z number
 ---@param theta number in radians
 ---@param phi number in radians
+---@param distance number
 function camera.pivot(target_x,target_y,target_z, theta, phi, distance)
 
     -- turn the cos of the pitch into a sign value, either 1 or -1
@@ -218,7 +222,7 @@ function camera.movement(dt)
 
     local movefb = (key"w" and 1 or 0) + (key"s" and -1 or 0)
     if movefb~=0 then
-        local forward = camera.get_forward_vector()
+        local forward = camera.getForwardVector()
         for i=1,3 do
             camera.position[i] = camera.position[i] +movefb*forward[i]*speed*dt
         end
@@ -227,7 +231,7 @@ function camera.movement(dt)
 
     local movelr = (key"a" and 1 or 0) + (key"d" and -1 or 0)
     if movelr~=0 then
-        local forward = camera.get_forward_vector(direction+rad90*movelr, 0)
+        local forward = camera.getForwardVector(direction+rad90*movelr, 0)
         camera.position[1] = camera.position[1] +forward[1]*speed*dt
         camera.position[2] = camera.position[2] +forward[2]*speed*dt
         cameraMoved = true

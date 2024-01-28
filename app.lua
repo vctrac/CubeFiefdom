@@ -1,5 +1,5 @@
 local lg = love.graphics
-local file_handler = require"file_handler"
+local file_handler = require"core.modules.file_handler"
 --convert a quad from an imageData to a drawable image
 local function Image_from_quad(source, x,y,w,h)
     local nid = love.image.newImageData(w, h)
@@ -7,10 +7,14 @@ local function Image_from_quad(source, x,y,w,h)
 
     return lg.newImage(nid)
 end
-
+local change_index = 0
+local undo_list = {}
+local redo_list = {}
 local pixel_scale = 4
+
 APP = {
     map = require"scene",
+    info = require"core.modules.info",
     toggle = {light=true, grid=false, texture=true, retro=false},
     atlas = nil,
     texture = {},
@@ -43,6 +47,12 @@ function APP.load()
     APP.map:new()
 end
 
+function APP.clear()
+    change_index = 0
+    APP.map:clear()
+    APP.map:new()
+end
+
 function APP.load_texture(filename)
     APP.atlas_data = love.image.newImageData("resource/image/"..filename)
     APP.texture_atlas = lg.newImage(APP.atlas_data)
@@ -66,16 +76,62 @@ function APP.option_toggle(name)
     return APP.toggle[name]
 end
 
+function APP.add_change(tab)--{cmd,index,texture}
+    local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
+    redo_list = {}
+    change_index = change_index+1
+    undo_list[change_index] = string
+end
+
+function APP.redo()
+    local string, ni
+    for i=1,#redo_list do
+        if redo_list[i].c_index == change_index+1 then
+            string = redo_list[i].string
+            ni = i
+        end
+    end
+    if not string then return end
+
+    change_index = change_index+1
+
+    local op = {}
+
+    for str in string.gmatch(string, '([^,]+)') do
+        table.insert(op,str)
+    end
+
+    undo_list[change_index] = string
+    table.remove(redo_list, ni)
+
+    APP.map.redo(op)
+end
+
+function APP.undo( )
+    if not undo_list[change_index] then return end
+
+    local op = {}
+
+    for str in string.gmatch(undo_list[change_index], '([^,]+)') do
+        table.insert(op,str)
+    end
+
+    table.insert(redo_list, {c_index = change_index, string = table.remove(undo_list)})
+    change_index = math.max(0, change_index-1)
+
+    APP.map.undo(op)
+end
+
 function APP.cube_map_history(name) --used for undo and redo features in hud.lua
-    APP.map[name](APP.map)
+    APP[name]()
 end
 
 function APP.save_lua()
-    file_handler.save("lua", APP.map, CONFIG.save_name)
+    file_handler.save("lua", APP.map, APP.info.save_data(), CONFIG.save_name)
 end
 
 function APP.save_json()
-    file_handler.save("json", APP.map, CONFIG.save_name)
+    file_handler.save("json", APP.map, APP.info.save_data(), CONFIG.save_name)
 end
 
 function APP.save_obj()
@@ -87,7 +143,9 @@ function APP.drop_file(filename, ext)
 	if file_handler[ext] then
         print"exist"
         if ext=="obj" then return end
-        APP.map:load_file(file_handler.load(ext, filename))
+        local data = file_handler.load(ext, filename)
+        APP.map:load_data(data)
+        APP.info.load_data(data)
     end
 end
 function APP.resize_screen(w, h)

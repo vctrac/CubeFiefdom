@@ -21,15 +21,15 @@ return function(tools, button_size, label_height)
         return function(_,x,y,w,h)
             g.setColor(theme.tab.active_color)
             g.rectangle("fill", x, y, w, self.props.height)
-            files_label:render(x, y, w, h)
+            files_label:render(x, y, w, label_height)
             minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
             if self.props.show then
-                local sy = y+lh4
-                save_lua:render(x, sy, w, label_height)
-                sy = sy+lh4
-                save_json:render(x, sy, w, label_height)
-                sy = sy+lh4
-                save_obj:render(x, sy, w, label_height)
+                y = y+lh4
+                save_lua:render(x, y, w, label_height)
+                y = y+lh4
+                save_json:render(x, y, w, label_height)
+                y = y+lh4
+                save_obj:render(x, y, w, label_height)
             end
         end
     end)(tools.scene)

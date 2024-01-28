@@ -1,6 +1,6 @@
 local lg = love.graphics
 local camera = g3d.camera
-local new_cube, current_cube --, new_text
+local new_cube, new_object, current_cube --, new_text
 
 -- create the mesh for the block cursor
 do
@@ -24,10 +24,6 @@ do
     }
 end
 
-local function sign(number)
-    return number > 0 and 1 or (number == 0 and 0 or -1)
-end
-
 -- Pick the side of a cube where the mouse is pointing
 ---@param pos vec3
 ---@param npos vec3
@@ -39,11 +35,11 @@ local function get_side(pos, npos)
 
     local result = vec3(0,0,0)
     if st.x=='1' then
-        result.x = sign(dif.x)
+        result.x = math.sign(dif.x)
     elseif st.y=='1' then
-        result.y = sign(dif.y)
+        result.y = math.sign(dif.y)
     elseif st.z=='1' then
-        result.z = sign(dif.z)
+        result.z = math.sign(dif.z)
     else
         print("some shit happened!")
     end
@@ -76,6 +72,7 @@ MOUSE = {
 
 function MOUSE.load()
     new_cube = g3d.newModel(DATA.model.cube, nil)
+    new_object = g3d.newSprite(DATA.image"circle")
     MOUSE:set_texture("0:0")
 end
 
@@ -85,7 +82,7 @@ end
 
 MOUSE.get_cube_under = function( )
     local cp = vec3(unpack(camera.position))
-    local ray = camera.get_mouse_ray()
+    local ray = camera.getMouseRay()
 
     local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
     
@@ -98,12 +95,11 @@ MOUSE.get_cube_under = function( )
         MOUSE.selected = { new = result_position, id = nearest}
         
         local rx,ry,rz = result_position:unpack()
-        -- local new_id = To_id({rx,ry,rz})
-        -- if not MOUSE.multi[new_id] then
-        --     MOUSE.multi[new_id] = {pos={rx,ry,rz},id=nearest}
-        -- end
-        -- new_text:setTranslation(rx,ry,rz)
-        new_cube:setTranslation(rx,ry,rz)
+        if APP.selected_tool=="pencil" then
+            new_cube:setTranslation(rx,ry,rz)
+        elseif APP.selected_tool=="object" then
+            new_object:setTranslation(rx,ry,rz)
+        end
         rx,ry,rz = nearest_position:unpack()
         current_cube:setTranslation(rx,ry,rz)
     else
@@ -125,12 +121,11 @@ function MOUSE.draw()
         if APP.selected_tool=="pencil" then
             lg.setColor(1,1,1,0.6)
             lg.setMeshCullMode( "back" )
-            -- for key, selected in pairs(MOUSE.multi) do
-                -- new_cube:setTranslation(selected.pos[1],selected.pos[2],selected.pos[3])
-                new_cube:draw( )
-            -- end
-            -- new_cube:draw( )
+            new_cube:draw( )
             lg.setMeshCullMode("none")
+        elseif APP.selected_tool=="object" then
+            lg.setColor(1,1,1,0.6)
+            new_object:draw( )
         end
     end
 end
@@ -164,12 +159,43 @@ local mouse_tools = {
                 MOUSE:set_texture(cube.texture)
             end
         end,
+        select = function(mx,my,mb)
+            if MOUSE.mode~="edit" then return end
+            
+            if mb==1 then
+                -- APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
+                print("selected", MOUSE.selected.id)
+            -- elseif mb==2 then
+                -- local cube = APP.map:get_cube( MOUSE.selected.id)
+                -- if not cube then return end
+                -- MOUSE:set_texture(cube.texture)
+            end
+        end,
+        object = function(mx,my,mb)
+            if MOUSE.mode~="edit" then return end
+            
+            if mb==1 then
+                -- APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
+                print("object added at", MOUSE.selected.new:unpack())
+            elseif mb==2 then
+                print("object removed at", MOUSE.selected.new:unpack())
+                -- local cube = APP.map:get_cube( MOUSE.selected.id)
+                -- if not cube then return end
+                -- MOUSE:set_texture(cube.texture)
+            end
+        end,
     },
     press = {
         pencil = function(mx,my,mb)
 
         end,
         brush = function(mx,my,mb)
+
+        end,
+        select = function(mx,my,mb)
+
+        end,
+        object = function(mx,my,mb)
 
         end,
     },

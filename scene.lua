@@ -1,67 +1,15 @@
 
--- local function hex2rgb(hex, alpha) 
--- 	local redColor,greenColor,blueColor=hex:match('ff?(..)(..)(..)')
--- 	redColor, greenColor, blueColor = tonumber(redColor, 16)/255, tonumber(greenColor, 16)/255, tonumber(blueColor, 16)/255
--- 	redColor, greenColor, blueColor = math.floor(redColor*100)/100, math.floor(greenColor*100)/100, math.floor(blueColor*100)/100
--- 	if alpha == nil then
--- 		return redColor, greenColor, blueColor
--- 	end
--- 	return redColor, greenColor, blueColor, alpha
--- end
-
--- local function Image_from_quad(source, x,y,w,h)
---     local nid = love.image.newImageData(w, h)
---     nid:paste(source, 0, 0, x, y, w, h)
-
---     return love.graphics.newImage(nid)
--- end
-
--- local select_model --= g3d.newModel(CUBE, nil, nil,nil, 1.005)
--- -- create the mesh for the block cursor
--- do
---     local a = -0.005
---     local b = 1.005
---     select_model = g3d.newModel{
---         {a,a,a}, {b,a,a}, {b,a,a},
---         {a,a,a}, {a,a,b}, {a,a,b},
---         {b,a,b}, {a,a,b}, {a,a,b},
---         {b,a,b}, {b,a,a}, {b,a,a},
-
---         {a,b,a}, {b,b,a}, {b,b,a},
---         {a,b,a}, {a,b,b}, {a,b,b},
---         {b,b,b}, {a,b,b}, {a,b,b},
---         {b,b,b}, {b,b,a}, {b,b,a},
-
---         {a,a,a}, {a,b,a}, {a,b,a},
---         {b,a,a}, {b,b,a}, {b,b,a},
---         {a,a,b}, {a,b,b}, {a,b,b},
---         {b,a,b}, {b,b,b}, {b,b,b},
---     }
--- end
--- local floor = math.floor
--- local grid_model = g3d.newModel(CUBE, nil, nil,nil, 1.001)
 local aabb_model = g3d.newModel(DATA.model.cube)
+---@diagnostic disable-next-line: undefined-field
 aabb_model:generateAABB()
-
-local change_index = 0
-local undo_list = {}
-local redo_list = {}
 
 local tile_row_size = 8
 local tile_column_size = 8
 
-local function add_change(tab)--{cmd,index,texture}
-    local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
-    redo_list = {}
-    change_index = change_index+1
-    undo_list[change_index] = string
-end
-
 local Scene = {
     cubes = {},
-    info = {},
+    -- info = {},
     model = nil,
-    -- alpha_ids = {},
     light_shader = love.graphics.newShader(g3d.shaderpath, DATA.shader.lighting),
     count = 0,
 }
@@ -126,47 +74,38 @@ end
 ---@param position table
 local add = function(index, texture_id, position)
     local ipos = From_id(texture_id)
-    
     Scene.count = Scene.count+1
-
-    -- if(a==7)then Scene.alpha_ids[index] = true end
-    
     Scene.cubes[index] = {uv = ipos, texture = texture_id, position = position}
     remesh()
     return true
 end
-
-local remove = function(index)-- beware of an unknow bug!
+-- Remove a cube from the cubes table array    
+---@function remove
+---@param index string
+local remove = function(index)-- there may be bugs here!
     Scene.count = Scene.count-1
-
-    -- if Scene.alpha_ids[index] then Scene.alpha_ids[index] = nil end
     Scene.cubes[index] = nil
     remesh()
+    return true
 end
 local function paint(index, texture_id)
     local ipos = From_id(texture_id)
     local old_tex = Scene.cubes[index].texture
 
     if old_tex==texture_id then
-        return true
+        return false
     end
-    -- if(a==7)then Scene.alpha_ids[index] = true end
     Scene.cubes[index].texture = texture_id
     Scene.cubes[index].uv = ipos
-
     remesh()
-
     return true
 end
 
 Scene.clear=function(self)
     --reset all
-    self.cubes = {}
-    self.redo_list = {}
-    self.undo_list = {}
-    change_index = 0
-    -- self.alpha_ids = {}
-    -- self.palette_count = 0
+    for id in pairs(self.cubes) do
+        self.cubes[id] = nil
+    end
     self.count = 0
 end
 
@@ -179,12 +118,10 @@ Scene.new=function(self)
     remesh()
     self.count = 1
 end
-Scene.load_file=function(self, data)
-    --reset all
+Scene.load_data=function(self, data)
     self:clear()
-    -- self.palette_count = data.palette_count
     self.count = data.count
-    self.info = data.info
+    -- self.info = data.info
 
     for _,k in ipairs(data.cubes) do
         local kpos = {k[1],k[2],k[3]}
@@ -192,11 +129,9 @@ Scene.load_file=function(self, data)
 
         local id = To_id(kpos)
         local ktex = To_id(ipos)
-        -- local id_type = Id_type(k.texture)
         
         self.cubes[id] = {uv = ipos, texture = ktex, position = kpos, dynamic = k[6]}
     end
-    -- self.count = #data.cubes
     remesh()
 end
 Scene.refresh = function(self)
@@ -214,8 +149,9 @@ Scene.add_cube = function(self, texture_id, x, y, z)
     local pos = {x,y,z}
     local index = To_id(pos)
     if self.cubes[index] then return false end
-    
-    add_change({"add",index,texture_id})
+
+    APP.add_change({"add",index,texture_id})
+
     return add(index, texture_id, pos)
 end
 
@@ -225,7 +161,6 @@ end
 ---@return boolean
 Scene.remove_cube = function(self, id)
     if self.count==1 then return false end
-    -- print(self.count)
     local index
     if type(id)=="string" then
         index = id
@@ -235,11 +170,11 @@ Scene.remove_cube = function(self, id)
         return false
     end
     if not self.cubes[index] then return false end
+
     local texture_id = tostring(self.cubes[index].texture)
-    add_change({"remove",index,texture_id})
-    remove(index)
-    
-    return true
+    APP.add_change({"remove",index,texture_id})
+
+    return remove(index)
 end
 Scene.get_cube = function(self,id)
     local index
@@ -264,28 +199,13 @@ Scene.paint_cube = function(self, id, texture)
     if not self.cubes[index] then return false end
 
     if texture and texture~=self.cubes[index].texture then
-        add_change({"paint",index, texture, self.cubes[index].texture})
+        APP.add_change({"paint",index, texture, self.cubes[index].texture})
         return paint(index, texture)
     end
+    return false
 end
-Scene.redo = function(self)
-    local string, ni
-    for i=1,#redo_list do
-        if redo_list[i].c_index == change_index+1 then
-            string = redo_list[i].string
-            ni = i
-        end
-    end
-    if not string then return end
 
-    change_index = change_index+1
-
-    local op = {}
-
-    for str in string.gmatch(string, '([^,]+)') do
-        table.insert(op,str)
-    end
-
+Scene.redo = function(op)
     if op[1] == "remove" then--remove
         remove(op[2])
     elseif op[1] == "add" then--add
@@ -294,19 +214,8 @@ Scene.redo = function(self)
     elseif op[1] == "paint" then--paint
         paint(op[2], op[3])
     end
-
-    undo_list[change_index] = string
-    table.remove(redo_list, ni)
 end
-Scene.undo = function(self)
-    if not undo_list[change_index] then return end
-
-    local op = {}
-
-    for str in string.gmatch(undo_list[change_index], '([^,]+)') do
-        table.insert(op,str)
-    end
-
+Scene.undo = function(op)
     if op[1] == "add" then--remove
         remove(op[2])
     elseif op[1] == "remove" then--add
@@ -315,9 +224,6 @@ Scene.undo = function(self)
     elseif op[1] == "paint" then--paint
         paint(op[2], op[4])
     end
-
-    table.insert(redo_list, {c_index = change_index, string = table.remove(undo_list)})
-    change_index = math.max(0, change_index-1)
 end
 Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     -- return false
@@ -325,7 +231,7 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     local n, p
     for i,k in pairs(self.cubes) do
         aabb_model:setTranslation(unpack(k.position))
-        -- k.highlight = false
+        ---@diagnostic disable-next-line: undefined-field
         local d,x,y,z = aabb_model:rayIntersectionAABB(ox, oy, oz, tx, ty, tz )
         if d and d<m then
             m = d
@@ -336,95 +242,89 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     return n, p
 end
 
-local string2bool = {["true"]=true, ["false"]=false}
+-- local string2bool = {["true"]=true, ["false"]=false}
 
----@param id string
----@param key string
----@param value any
-Scene.add_info = function(self, id, key, value)
-    if not self.info[id] then
-        self.info[id] = {}
-    end
+-- ---@param id string
+-- ---@param key string
+-- ---@param value any
+-- Scene.add_info = function(self, id, key, value)
+--     if not self.info[id] then
+--         self.info[id] = {}
+--     end
 
-    local v = value
-    local isBool = string2bool[string.lower(value)]
-    if tonumber(v) then
-        v = tonumber(v)
-    elseif isBool ~=nil then
-        v = isBool
-    end
-    -- print(type(key), v )
-    self.info[id][key] = v
-end
+--     local v = value
+--     local isBool = string2bool[string.lower(value)]
+--     if tonumber(v) then
+--         v = tonumber(v)
+--     elseif isBool ~=nil then
+--         v = isBool
+--     end
+--     self.info[id][key] = v
+-- end
 
----@param id string
----@param key string
-Scene.remove_info = function(self, id, key)
-    if not(self.info[id] and self.info[id][key]~=nil) then
-        return false
-    end
-    self.info[id][key]=nil
-    return true
-end
+-- ---@param id string
+-- ---@param key string
+-- Scene.remove_info = function(self, id, key)
+--     if not(self.info[id] and self.info[id][key]~=nil) then
+--         return false
+--     end
+--     self.info[id][key]=nil
+--     return true
+-- end
 
----@param id string
----@param old string
----@param new string
----@param value? any
-Scene.set_info_key = function(self, id, old, new, value)
-    local old_key = tostring(old)
-    local new_key = tostring(new)
-    if not self.info[id] then
-        -- self.info[id] = {}
-        -- self.info[id][new] = value or "..."
-        self:add_info(id, new_key, value or "...")
-    elseif self.info[id][new_key] then
-        return
-    else
-        if self.info[id][old_key] then
-            if new_key~="" then--if new_key key is empty than delete it
-                -- print"here"
-                -- self.info[id][new_key] = value or self.info[id][key]
-                self:add_info(id, new_key, value or self.info[id][old_key])
-            end
-            self.info[id][old_key] = nil
+-- ---@param id string
+-- ---@param old string
+-- ---@param new string
+-- ---@param value? any
+-- Scene.set_info_key = function(self, id, old, new, value)
+--     local old_key = tostring(old)
+--     local new_key = tostring(new)
+--     if not self.info[id] then
+--         self:add_info(id, new_key, value or "...")
+--     elseif self.info[id][new_key] then
+--         return
+--     else
+--         if self.info[id][old_key] then
+--             if new_key~="" then--if new_key key is empty than delete it
+--                 self:add_info(id, new_key, value or self.info[id][old_key])
+--             end
+--             self.info[id][old_key] = nil
             
-            --check if there is no more info for this tile
-            local c = 0
-            for _ in pairs(self.info[id]) do
-                c = c +1
-            end
-            if c==0 then self.info[id] = nil end
-        else
-            -- self.info[id][new_key] = value or "..."
-            self:add_info(id, new_key, value or "...")
-        end
-    end
-end
+--             --check if there's no info for this tile
+--             local c = 0
+--             for _ in pairs(self.info[id]) do
+--                 c = c +1
+--             end
+--             if c==0 then self.info[id] = nil end
+--         else
+--             self:add_info(id, new_key, value or "...")
+--         end
+--     end
+-- end
 
---Returns a <b>table</b> with one or multiple pars of <i>[ keys ]</i> and <i>[ values ]</i>,</br>
--- or <b>empty table</b> if there is no info for this ID</br>
--- { [key1]=value, [key2]=value, ... }
----@param id string
----@return table info
-Scene.get_info = function(self, id)
-    if self.info[id] then
-        return self.info[id]
-    end
-    return {}
-end
+-- --Returns a <b>table</b> with one or multiple pars of <i>[ keys ]</i> and <i>[ values ]</i>,</br>
+-- -- or <b>empty table</b> if there is no info for this ID</br>
+-- -- { [key1]=value, [key2]=value, ... }
+-- ---@param id string
+-- ---@return table info
+-- Scene.get_info = function(self, id)
+--     if self.info[id] then
+--         return self.info[id]
+--     end
+--     return {}
+-- end
 
----@param id string
----@param key string
----@return any value
-Scene.get_info_key = function(self, id, key)
-    if key~=nil and self.info[id] then
-        if self.info[id][key] then
-            return self.info[id][key]
-        end
-    end
-    return false
-end
+-- ---@param id string
+-- ---@param key string
+-- ---@return any value
+-- Scene.get_info_key = function(self, id, key)
+--     if key~=nil and self.info[id] then
+--         if self.info[id][key] then
+--             return self.info[id][key]
+--         end
+--     end
+--     return false
+-- end
 
 Scene.draw = function(self)
     local s = APP.toggle.light and self.light_shader

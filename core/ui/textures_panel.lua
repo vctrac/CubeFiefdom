@@ -22,20 +22,20 @@ return function(tools, button_size, label_height)
         return function(_,x,y,w,h)
             g.setColor(theme.tab.active_color)
             g.rectangle("fill", x, y, w, self.props.height)
-            texture_label:render(x, y, w, h)
+            texture_label:render(x, y, w, label_height)
             minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
             if self.props.show then
-                local sx = x+4
-                local sy = y+h+4
+                x = x+4
+                y = y+label_height+4
                 
                 g.setColor(1,1,1)
-                g.draw(APP.texture_atlas, sx, sy)
+                g.draw(APP.texture_atlas, x, y)
                 for _,tex in ipairs(tools.texture_buttons) do
-                    tex:render(sx+tex.props.x, sy+tex.props.y, TILE_SIZE, TILE_SIZE)
+                    tex:render(x+tex.props.x, y+tex.props.y, TILE_SIZE, TILE_SIZE)
                 end
-                sx = x+w*0.5 - current_texture_x
-                sy = sy+texture_atlas_size+button_size
-                g.draw(APP.texture[MOUSE.texture],sx,sy,0,4,4)
+                x = x+w*0.5 - current_texture_x
+                y = y+texture_atlas_size+button_size
+                g.draw(APP.texture[MOUSE.texture],x,y,0,4,4)
             end
         end
     end)(tools.scene)

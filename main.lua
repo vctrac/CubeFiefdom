@@ -82,18 +82,20 @@ local pivot = {
     model = nil,
     movement = function(self, dt)
         ---@TODO: mouse panning should move the CUBE_MAP relative to screen (left and right, up and down) like in cubeKingdom
+
+        if not Key.shift then return end
         local moveX, moveY = 0,0--MOUSE.move_x, MOUSE.move_y
         local moved = false
 
-        if keydown"right" then moveX = moveX - 1 end
-        if keydown"down" then moveY = moveY - 1 end
-        if keydown"left" then moveX = moveX + 1 end
-        if keydown"up" then moveY = moveY + 1 end
-        if keydown "pagedown" then
+        if keydown"d" then moveX = moveX - 1 end
+        if keydown"s" then moveY = moveY - 1 end
+        if keydown"a" then moveX = moveX + 1 end
+        if keydown"w" then moveY = moveY + 1 end
+        if keydown "q" then
             self.z = self.z - self.speed*dt
             moved = true
         end
-        if keydown "pageup" then
+        if keydown "e" then
             self.z = self.z + self.speed*dt
             moved = true
         end
@@ -164,7 +166,7 @@ local selected = {
         -- end
     end,
     input_press = function(self, key)
-        if move_keys[key] then
+        if not Key.shift and move_keys[key] then
             self.direction = move_keys[key]
             -- self.moved = true
             self:movement()
@@ -333,8 +335,8 @@ function love.draw()
     end
 
     ---@DEBUG
-    -- lg.setColor(1,1,1)
-    -- lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    lg.setColor(1,1,1)
+    lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
     -- lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
     -- lg.printf( day_time, 0, APP.height-24, APP.width,"right")
 end
@@ -350,13 +352,13 @@ function love.keypressed(k)
     end
     if Key.ctrl then
         if k=='z' then
-            APP.map:undo()
+            APP.undo()
         elseif k=='y' then
-            APP.map:redo()
+            APP.redo()
         end
         MOUSE.set_mode"rotating"
     elseif MOUSE.mode~="hud" then
-        -- if k=="n" then APP.map:clear() end
+        if k=="n" then APP.clear() end
         
         -- if k=="l" then APP.toggle.light = not APP.toggle.light end
         -- if k=="g" then APP.toggle.grid = not APP.toggle.grid end
@@ -477,6 +479,5 @@ end
 
 function love.resize(w, h)
     APP.resize_screen(w,h)
-    g3d.camera.aspectRatio = w / h
-    g3d.camera.updateProjectionMatrix()
+    g3d.camera.resizeScreen(w,h)
 end

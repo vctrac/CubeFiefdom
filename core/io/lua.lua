@@ -1,18 +1,18 @@
 
 local serpent = require "library.serpent"
 
-local function save_lua( data, filename)
+local function save_lua( map, info, filename)
     local save = io.open(filename ..".lua", 'w')
     assert(save, "could not open file")
     local t = {
         version = CONFIG.version,
         app_name = CONFIG.app_name,
-        count = data.count,
-        info = data.info,
+        count = map.count,
+        info = info,
         cubes = {}
     }
 
-    for _,k in pairs(data.cubes) do
+    for _,k in pairs(map.cubes) do
         -- if data.info[k.texture] and not(t.info[k.texture]) then
         --     t.info[k.texture] = data.info[k.texture]
         -- end
