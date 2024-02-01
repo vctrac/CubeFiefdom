@@ -2,28 +2,6 @@ local lg = love.graphics
 local camera = g3d.camera
 local new_cube, new_object, current_cube --, new_text
 
--- create the mesh for the block cursor
-do
-    local a = -0.505
-    local b = 0.505
-    current_cube = g3d.newModel{
-        {a,a,a}, {b,a,a}, {b,a,a},
-        {a,a,a}, {a,a,b}, {a,a,b},
-        {b,a,b}, {a,a,b}, {a,a,b},
-        {b,a,b}, {b,a,a}, {b,a,a},
-
-        {a,b,a}, {b,b,a}, {b,b,a},
-        {a,b,a}, {a,b,b}, {a,b,b},
-        {b,b,b}, {a,b,b}, {a,b,b},
-        {b,b,b}, {b,b,a}, {b,b,a},
-
-        {a,a,a}, {a,b,a}, {a,b,a},
-        {b,a,a}, {b,b,a}, {b,b,a},
-        {a,a,b}, {a,b,b}, {a,b,b},
-        {b,a,b}, {b,b,b}, {b,b,b},
-    }
-end
-
 -- Pick the side of a cube where the mouse is pointing
 ---@param pos vec3
 ---@param npos vec3
@@ -71,8 +49,9 @@ MOUSE = {
 }
 
 function MOUSE.load()
+    current_cube = g3d.newModel(DATA.model.wired_cube)
     new_cube = g3d.newModel(DATA.model.cube, nil)
-    new_object = g3d.newSprite(DATA.image"circle")
+    new_object = g3d.newSprite(DATA.image"object",{scale = 0.5})
     MOUSE:set_texture("0:0")
 end
 
@@ -83,14 +62,20 @@ end
 MOUSE.get_cube_under = function( )
     local cp = vec3(unpack(camera.position))
     local ray = camera.getMouseRay()
-
-    local nearest, position = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
-    
+    local obj = false
+    local nearest, position, distance = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
+    local nearest2, position2, distance2 = APP.object:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z, distance)
+    -- print(distance, distance2)
+    if nearest2 and distance2<distance then
+        nearest = nearest2
+        position = position2
+        obj = true
+    end
     if nearest then
         local hit_position = vec3(position)
         
         MOUSE.set_mode("edit")
-        local nearest_position = vec3(APP.map.cubes[nearest].position)
+        local nearest_position = vec3((obj and APP.object.list[nearest] or APP.map.list[nearest]).position)
         local result_position = get_side(hit_position, nearest_position)
         MOUSE.selected = { new = result_position, id = nearest}
         
@@ -135,11 +120,6 @@ local mouse_tools = {
         pencil = function(mx,my,mb)
             if MOUSE.mode == "edit" then
                 if mb==1 then
-                    -- print(MOUSE.texture_type)
-                    -- for key, selected in pairs(MOUSE.multi) do
-                    --     APP.map:add_cube( MOUSE.texture, selected.pos)
-                    -- end
-                    -- MOUSE.multi = {}
                     APP.map:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
                 elseif mb==2 then
                     if APP.map:remove_cube(MOUSE.selected.id) then
@@ -175,10 +155,11 @@ local mouse_tools = {
             if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                -- APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
-                print("object added at", MOUSE.selected.new:unpack())
+                APP.object:add(MOUSE.selected.new:unpack())
+                -- print("object added at", MOUSE.selected.new:unpack())
             elseif mb==2 then
-                print("object removed at", MOUSE.selected.new:unpack())
+                APP.object:remove(MOUSE.selected.id)
+                -- print("object removed at", MOUSE.selected.new:unpack())
                 -- local cube = APP.map:get_cube( MOUSE.selected.id)
                 -- if not cube then return end
                 -- MOUSE:set_texture(cube.texture)

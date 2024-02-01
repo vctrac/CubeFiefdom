@@ -10,6 +10,7 @@ DATA = {
     image = {
         atlas = lg.newImage(img.."tex.png"),
         circle = lg.newImage(img.."circle.png"),
+        object_card = lg.newImage(img.."object_card.png"),
         center = lg.newImage(img.."center.png"),
         -- new_text = lg.newImage(img.."new_text.png"),
         button_frame = lg.newImage(img_bttn.."button_frame.png"),
@@ -19,11 +20,10 @@ DATA = {
         brush = lg.newImage(img_bttn.."brush.png"),
         rotate = lg.newImage(img_bttn.."rotate.png"),
         no_texture = lg.newImage(img_bttn.."no_texture.png"),
-        -- object = lg.newImage(img_bttn.."no_texture.png"),
+        object = lg.newImage(img_bttn.."object.png"),
+        select = lg.newImage(img_bttn.."select.png"),
         light_on = lg.newImage(img_bttn.."light.png"),
         light_off = lg.newImage(img_bttn.."light_off.png"),
-        -- shader_on = lg.newImage(img_bttn.."shader.png"),
-        -- shader_off = lg.newImage(img_bttn.."shader_off.png"),
         retro_on = lg.newImage(img_bttn.."shader.png"),
         retro_off = lg.newImage(img_bttn.."shader_off.png"),
         grid_on = lg.newImage(img_bttn.."grid.png"),
@@ -58,9 +58,24 @@ DATA = {
         clouds = shader.."clouds.frag",
     }
 }
--- DATA.get()
--- DATA.image.grid_off = DATA.image.grid_on
--- DATA.image.texture_off = DATA.image.texture_on
+local a = -0.505
+local b = 0.505
+DATA.model.wired_cube = {
+    {a,a,a}, {b,a,a}, {b,a,a},
+    {a,a,a}, {a,a,b}, {a,a,b},
+    {b,a,b}, {a,a,b}, {a,a,b},
+    {b,a,b}, {b,a,a}, {b,a,a},
+
+    {a,b,a}, {b,b,a}, {b,b,a},
+    {a,b,a}, {a,b,b}, {a,b,b},
+    {b,b,b}, {a,b,b}, {a,b,b},
+    {b,b,b}, {b,b,a}, {b,b,a},
+
+    {a,a,a}, {a,b,a}, {a,b,a},
+    {b,a,a}, {b,b,a}, {b,b,a},
+    {a,a,b}, {a,b,b}, {a,b,b},
+    {b,a,b}, {b,b,b}, {b,b,b},
+}
 
 setmetatable(DATA.image, {
     __call = function(self, i)

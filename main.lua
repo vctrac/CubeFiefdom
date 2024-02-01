@@ -43,6 +43,7 @@ require"app"
 require"mouse"
 HUD = require"hud"
 
+-- local object = require"core.modules.object"
 local camera = g3d.camera
 local sky
 
@@ -120,16 +121,16 @@ local pivot = {
 ---@param id string
 ---@param translation table
 local function edit(id, translation)
-    local has_cube = APP.map:get_cube( id)
-    if APP.selected_tool == "pencil" then
-        if has_cube then
-            APP.map:remove_cube( id)
-        else
-            APP.map:add_cube( MOUSE.texture, unpack( translation))
-        end
-    elseif APP.selected_tool == "brush" then
-        if has_cube then
+    local is_cube = APP.get_type( id)
+    if APP.selected_tool == "brush" then
+        if is_cube == "cube" then
             APP.map:paint_cube( id, MOUSE.texture)
+        end
+    else
+        if is_cube == "cube" then
+            APP.map:remove_cube( id)
+        elseif is_cube == "empty" then
+            APP.map:add_cube( MOUSE.texture, unpack( translation))
         end
     end
 end
@@ -208,26 +209,26 @@ local selected = {
 }
 
 -- create the mesh for the block cursor
-do
-    local a = -0.505
-    local b = 0.505
-    selected.cube = g3d.newModel{
-        {a,a,a}, {b,a,a}, {b,a,a},
-        {a,a,a}, {a,a,b}, {a,a,b},
-        {b,a,b}, {a,a,b}, {a,a,b},
-        {b,a,b}, {b,a,a}, {b,a,a},
+-- do
+--     local a = -0.505
+--     local b = 0.505
+    -- selected.cube = g3d.newModel(DATA.model.wired_cube)
+--         {a,a,a}, {b,a,a}, {b,a,a},
+--         {a,a,a}, {a,a,b}, {a,a,b},
+--         {b,a,b}, {a,a,b}, {a,a,b},
+--         {b,a,b}, {b,a,a}, {b,a,a},
 
-        {a,b,a}, {b,b,a}, {b,b,a},
-        {a,b,a}, {a,b,b}, {a,b,b},
-        {b,b,b}, {a,b,b}, {a,b,b},
-        {b,b,b}, {b,b,a}, {b,b,a},
+--         {a,b,a}, {b,b,a}, {b,b,a},
+--         {a,b,a}, {a,b,b}, {a,b,b},
+--         {b,b,b}, {a,b,b}, {a,b,b},
+--         {b,b,b}, {b,b,a}, {b,b,a},
 
-        {a,a,a}, {a,b,a}, {a,b,a},
-        {b,a,a}, {b,b,a}, {b,b,a},
-        {a,a,b}, {a,b,b}, {a,b,b},
-        {b,a,b}, {b,b,b}, {b,b,b},
-    }
-end
+--         {a,a,a}, {a,b,a}, {a,b,a},
+--         {b,a,a}, {b,b,a}, {b,b,a},
+--         {a,a,b}, {a,b,b}, {a,b,b},
+--         {b,a,b}, {b,b,b}, {b,b,b},
+--     }
+-- end
 --------------------------------------------------------------------------------------
 -- ##     ##    ###    #### ##    ## 
 -- ###   ###   ## ##    ##  ###   ## 
@@ -251,14 +252,14 @@ function love.load(...)
     sky = g3d.newModel(DATA.model.sphere, nil, {0,0,-50}, nil, 500)
     sky.shader = love.graphics.newShader(g3d.shaderpath, DATA.shader["gradient"]) --gradient, grid, sky, clouds
     sky.shader:send("Time",5)
-
+    selected.cube = g3d.newModel(DATA.model.wired_cube)
     camera.sprite = g3d.newSprite(DATA.image["camera"],{scale = 0.5})
     pivot.model = g3d.newSprite(DATA.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
 
     for id,_ in pairs(APP.texture) do
         HUD.new_texture_button(id)
     end
-
+    
     -- APP.map:add_info("0:0", "breakable", "true")
     -- APP.map:add_info("0:2", "walkable", true)
 end
@@ -308,6 +309,7 @@ function love.update(dt)
     lg.setColor(1,1,1)
     sky:draw()
     APP.map:draw()
+    APP.object:draw()
     pivot.model:draw()
     MOUSE.draw()
     if APP.first_person_view then
@@ -329,7 +331,6 @@ function love.draw()
     else
         lg.draw(APP.canvas,0,0,0,APP.pixel_scale,APP.pixel_scale)
     end
-    
     if not APP.first_person_view then
         HUD:draw()
     end

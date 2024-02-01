@@ -11,9 +11,11 @@ local change_index = 0
 local undo_list = {}
 local redo_list = {}
 local pixel_scale = 4
+local types = {cube=1, object=1}
 
 APP = {
     map = require"scene",
+    object = require"core.modules.object",
     info = require"core.modules.info",
     toggle = {light=true, grid=false, texture=true, retro=false},
     atlas = nil,
@@ -76,9 +78,32 @@ function APP.option_toggle(name)
     return APP.toggle[name]
 end
 
-function APP.add_change(tab)--{cmd,index,texture}
-    local string = table.concat(tab, ',')--string.format("%s,%s,%s",cmd,index,texture)
-    redo_list = {}
+function APP.get(id)
+    local index
+    if type(id)=="string" then
+        index = id
+    elseif type(id)=="table" then
+        index = To_id(id)
+    else
+        return false
+    end
+
+    return APP.object.list[index] or APP.map.list[index]
+end
+
+--Returns either object, cube, empty or nil
+---@param id string
+---@return string type
+function APP.get_type(id)
+    if type(id)~="string" then return "false" end
+    return (APP.object.list[id] and "object") or (APP.map.list[id] and "cube") or "empty"
+end
+
+function APP.add_change(tab)--{type, cmd, position_index, texture}
+    local string = table.concat(tab, ',')
+    for i=1,#redo_list do
+        redo_list[i] = nil
+    end
     change_index = change_index+1
     undo_list[change_index] = string
 end
@@ -94,32 +119,48 @@ function APP.redo()
     if not string then return end
 
     change_index = change_index+1
-
+    -- print(string)
     local op = {}
-
+    local t = ""
     for str in string.gmatch(string, '([^,]+)') do
-        table.insert(op,str)
+        if types[str] then
+            t = str
+        else
+            table.insert(op,str)
+        end
     end
 
     undo_list[change_index] = string
     table.remove(redo_list, ni)
-
-    APP.map.redo(op)
+    if t=="cube" then
+        APP.map.redo(op)
+    elseif t=="object" then
+        APP.object.redo(op)
+    end
 end
 
 function APP.undo( )
     if not undo_list[change_index] then return end
 
     local op = {}
-
+    local t = ""
     for str in string.gmatch(undo_list[change_index], '([^,]+)') do
-        table.insert(op,str)
+        if types[str] then
+            t = str
+        else
+            table.insert(op,str)
+        end
     end
 
+    -- print(undo_list[change_index])
     table.insert(redo_list, {c_index = change_index, string = table.remove(undo_list)})
     change_index = math.max(0, change_index-1)
 
-    APP.map.undo(op)
+    if t=="cube" then
+        APP.map.undo(op)
+    elseif t=="object" then
+        APP.object.undo(op)
+    end
 end
 
 function APP.cube_map_history(name) --used for undo and redo features in hud.lua
