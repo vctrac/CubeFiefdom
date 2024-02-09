@@ -6,7 +6,25 @@ local img_bttn = img.."buttons/"
 local model = "resource/model/"
 local shader = "resource/shader/"
 
-DATA = {
+RES = {
+    palette = {
+        black = {0,0,0},
+        white = {1,1,1},
+        zeus = {0.169, 0.157, 0.129},
+        deep_coffee = {0.384, 0.298, 0.235},
+        tumbleweed = {0.851, 0.675, 0.545},
+        desert_sand = {0.890, 0.812, 0.706},
+        dark_gray_blue = {0.141, 0.239, 0.361},
+        jet_grey = {0.365, 0.447, 0.459},
+        horizon = {0.353, 0.529, 0.627},
+        stone = {0.694, 0.647, 0.553},
+        dull_red = {0.690, 0.227, 0.282},
+        raw_sienna = {0.831, 0.502, 0.302},
+        sand = {0.878, 0.784, 0.447},
+        mineral_green = {0.243, 0.412, 0.345},
+        faded_blue = {0.396, 0.549, 0.733},
+        light_grey_blue = {0.631, 0.729, 0.847},
+    },
     image = {
         atlas = lg.newImage(img.."tex.png"),
         circle = lg.newImage(img.."circle.png"),
@@ -60,7 +78,7 @@ DATA = {
 }
 local a = -0.505
 local b = 0.505
-DATA.model.wired_cube = {
+RES.model.wired_cube = {
     {a,a,a}, {b,a,a}, {b,a,a},
     {a,a,a}, {a,a,b}, {a,a,b},
     {b,a,b}, {a,a,b}, {a,a,b},
@@ -77,7 +95,7 @@ DATA.model.wired_cube = {
     {b,a,b}, {b,b,b}, {b,b,b},
 }
 
-setmetatable(DATA.image, {
+setmetatable(RES.image, {
     __call = function(self, i)
         return self[i] or self.no_texture
     end

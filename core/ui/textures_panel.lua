@@ -20,7 +20,7 @@ return function(tools, button_size, label_height)
         local minimize_btn = minimize_button( scene, self.props, label_height+4)
         local minimize_btn_size = 16
         return function(_,x,y,w,h)
-            g.setColor(theme.tab.active_color)
+            g.setColor(RES.palette[ theme.tab.background])
             g.rectangle("fill", x, y, w, self.props.height)
             texture_label:render(x, y, w, label_height)
             minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
@@ -28,7 +28,7 @@ return function(tools, button_size, label_height)
                 x = x+4
                 y = y+label_height+4
                 
-                g.setColor(1,1,1)
+                g.setColor(RES.palette.white)
                 g.draw(APP.texture_atlas, x, y)
                 for _,tex in ipairs(tools.texture_buttons) do
                     tex:render(x+tex.props.x, y+tex.props.y, TILE_SIZE, TILE_SIZE)

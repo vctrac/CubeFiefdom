@@ -7,11 +7,11 @@ local Info_button = require"core.ui.info_label_button"
 local Gradient_Label = require"core.ui.gradient_label"
 local button_size = 22
 local label_height = 16
-local text_inputs = { info = {}}
+local text_inputs = { info = {}, object={}}
 -- local Tools.buttons = {}
 -- local texture_buttons = {}
 local lg = love.graphics
-local blinking_cursor_timer = 0
+-- local blinking_cursor_timer = 0
 
 local Tools = {
     start_x = 4,
@@ -26,7 +26,7 @@ local Tools = {
 }
 
 
-
+--radio function for text fields
 local function text_field_active( i)
     for index,field in pairs(text_inputs.info) do
         field.props.active = index==i
@@ -46,12 +46,14 @@ local function Text_input(name, scene)
             local txt = self.props.txt
             if self.props.active then
                 txt = txt ..'|'
-                lg.setColor(0.1,0.3,0.3)
+                -- lg.setColor(0.1,0.3,0.3)
+                lg.setColor(RES.palette[ theme.text_input.active])
             else
-                lg.setColor(0.1,0.1,0.1)
+                -- lg.setColor(0.1,0.1,0.1)
+                lg.setColor(RES.palette[ theme.text_input.inactive])
             end
             lg.rectangle("fill", x,y,w,h)
-            lg.setColor(1,1,1)
+            lg.setColor(RES.palette.white)
             lg.printf(txt, x, y, w, "center")
         end
     end)
@@ -69,11 +71,11 @@ local function ok_pressed()
 
     if #tik.txt==0 then return end
     if #tiv.txt==0 then tiv.txt = "false" end
-    if tik.txt ~= tik.old_txt then
-        APP.info:set_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
+    if tik.txt ~= tik.old_txt then --esse
+        APP.tile_info:set_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
         Tools.load_tool_info(Tools.scene, MOUSE.texture)
     else
-        APP.info.add(MOUSE.texture, tik.txt, tiv.txt)
+        APP.tile_info:add(MOUSE.texture, tik.txt, tiv.txt)
         Tools.new_info(Tools.scene, tik.txt, tiv.txt)
     end
     Tools.info_panel_dialog.props.visible = false
@@ -97,9 +99,9 @@ local function info_input_box(scene)
             self.props.visible = false
             MOUSE.set_mode"wait"
         end)
-        local btn_discard = Button.button(scene, "discard", function()
+        local btn_discard = Button.button(scene, "discard", function() --esse
             -- print"discard"
-            APP.info.remove(MOUSE.texture, text_inputs.info.key.props.txt)
+            APP.tile_info:remove(MOUSE.texture, text_inputs.info.key.props.txt)
             Tools.load_tool_info(scene, MOUSE.texture)
             self.props.visible = false
             text_inputs:clear()
@@ -107,9 +109,9 @@ local function info_input_box(scene)
         end)
         local btn_size = 16
         return function(_,x,y,w,h)
-            lg.setColor(0.2,0.2,0.2)
+            lg.setColor(RES.palette.zeus)
             lg.rectangle("fill", x,y,w,h)
-            lg.setColor(1,1,1)
+            lg.setColor(RES.palette.white)
             lg.printf(string.format("[ %s ]",MOUSE.texture), x, y, w, "center")
 
             local yy = y+btn_size+4
@@ -145,9 +147,9 @@ Tools.clear_info=function()
     Tools.info = {}
 end
 
-Tools.load_tool_info = function(scene, id)
+Tools.load_tool_info = function(scene, id) --esse
     Tools.clear_info()
-    local info = APP.info.get(id)
+    local info = APP.tile_info:get(id)
     for k,v in pairs(info) do
         Tools.new_info(scene, k, v)
     end
@@ -156,7 +158,7 @@ end
 ---@param scene table Inky scene
 ---@param key string key|value
 ---@param value boolean|number|string info value
-Tools.new_info = function( scene, key, value)
+Tools.new_info = function( scene, key, value) --esse
     Tools.info[key] = Info_button(scene, key, tostring(value),
     function(self)
         Tools.info_panel_dialog.props.visible = true
@@ -232,6 +234,7 @@ local tools_panel = require"core.ui.tools_panel"
 local textures_panel = require"core.ui.textures_panel"
 ----------------------------------------------------------------------------INFO PANEL
 local info_panel = Inky.defineElement(function(self, scene)
+    local lhp4 = label_height+4
     local infos_label = Gradient_Label(scene, "TILE INFO")
     local add_info = Button.label(scene, "new", "center",function()
         text_field_active( "key")
@@ -239,18 +242,18 @@ local info_panel = Inky.defineElement(function(self, scene)
         Tools.info_panel_dialog.props.visible = true
         MOUSE.set_mode"hud_dialog"
     end)
-    self.props.height = label_height*2.5
+    self.props.height = lhp4
     self.props.max_height = label_height*2.5
-    self.props.show = true
-    local minimize_btn = minimize_button( scene, self.props, label_height+4)
+    self.props.show = false
+    local minimize_btn = minimize_button( scene, self.props, lhp4)
     local minimize_btn_size = 16
     return function(_,x,y,w,h)
-        lg.setColor(theme.tab.active_color)
+        lg.setColor(RES.palette[ theme.tab.background])
         lg.rectangle("fill", x, y, w, self.props.height)
         infos_label:render(x, y, w, label_height)
         minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
         if self.props.show then
-            y = y+label_height+4
+            y = y+lhp4
             local count = 2.5
             for _,lb in pairs(Tools.info) do
                 lb:render(x, y, w-5, label_height)
@@ -265,16 +268,17 @@ local info_panel = Inky.defineElement(function(self, scene)
     end
 end)
 ----------------------------------------------------------------------------OBJECT PANEL
+
 local object_panel = Inky.defineElement(function(self, scene)
     local infos_label = Gradient_Label(scene, "OBJECT INFO")
-    
-    self.props.height = label_height*2.5
+    local lhp4 = label_height+4
+    self.props.height = lhp4
     self.props.max_height = label_height*2.5
-    self.props.show = true
-    local minimize_btn = minimize_button( scene, self.props, label_height+4)
+    self.props.show = false
+    local minimize_btn = minimize_button( scene, self.props, lhp4)
     local minimize_btn_size = 16
     return function(_,x,y,w,h)
-        lg.setColor(theme.tab.active_color)
+        lg.setColor(RES.palette[ theme.tab.background])
         lg.rectangle("fill", x, y, w, self.props.height)
         infos_label:render(x, y, w, label_height)
         minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)

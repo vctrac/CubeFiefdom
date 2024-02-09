@@ -8,19 +8,20 @@ local framed_button = Inky.defineElement(function(self)
         self.props.color = "click"
     end)
     return function(_, x, y, w, h)
-        love.graphics.setColor(theme.button[self.props.color])
-        love.graphics.draw(DATA.image"button_frame", x, y)
-        love.graphics.setColor(1,1,1)
-        love.graphics.draw(DATA.image(self.props.key), x, y)
+        -- love.graphics.setColor(theme.button[self.props.color])
+        lg.setColor(RES.palette[ theme.button[self.props.color]])
+        lg.draw(RES.image"button_frame", x, y)
+        lg.setColor(RES.palette[theme.button.text])
+        lg.draw(RES.image(self.props.key), x, y)
     end
 end)
 local function label_button(scene, text, align, f)
     local lb= Inky.defineElement(function(self)
         self.props.color = "background"
         return function(_, x, y, w, h)
-            lg.setColor(theme.label[self.props.color])
+            lg.setColor(RES.palette[theme.label[self.props.color]])
             lg.rectangle("fill",x,y,w,h)
-            lg.setColor(theme.label.text)
+            lg.setColor(RES.palette[theme.label.text])
             lg.printf( text, x,y,w,align)
         end
     end)(scene)
@@ -42,13 +43,13 @@ end
 local function image_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
-            love.graphics.setColor(theme.button[self.props.color])
-            love.graphics.draw(DATA.image(self.props.key), x, y)
+            lg.setColor(RES.palette[ theme.button[ self.props.color]])
+            lg.draw(RES.image(self.props.key), x, y)
         end
     end))(scene)
 
     button.props.key = name
-    button.props.color = "on"
+    button.props.color = "off_over"
 
     button:onPointerEnter(function(self, pointer)
         self.props.color ="on_over"
@@ -75,7 +76,8 @@ local function radio_button(scene, name, fun, active)
     if active then button.props.activeKey=name end
 
     button:onPointerEnter(function(self, pointer)
-        self.props.color ="on_over"
+        local isOn = self.props.activeKey==name
+        self.props.color = (isOn and "on" or "off") .."_over"
     end)
     button:onPointerExit(function(self, pointer)
         local isOn = self.props.activeKey==name
@@ -112,14 +114,14 @@ local function edit_button(scene, name, fun)
     button.props.key = name
     button.props.color = "off"
     button:onPointerEnter(function(self, pointer)
-        self.props.color ="on"
+        self.props.color ="on_over"
     end)
     button:onPointerExit(function(self, pointer)
         self.props.color = "off"
     end)
     button:onPointer("release", function(self)
         fun(name)
-        self.props.color = "on"
+        self.props.color = "on_over"
     end)
     return button
 end
@@ -129,11 +131,11 @@ local function texture_button(scene, name, fun)
     local button = (Inky.defineElement(function(self)
         return function(_, x, y, w, h)
             if self.props.active or self.props.selected then
-                lg.setColor(theme.button.background)
+                lg.setColor(RES.palette[ theme.button.background])
                 local s = 1.25
                 local sp = TILE_SIZE*0.125
                 lg.rectangle("fill", x-sp-1,y-sp-1,w*s+2,h*s+2)
-                lg.setColor(1,1,1)
+                lg.setColor(RES.palette[ theme.button.text])
                 lg.draw(APP.texture[name],x-sp,y-sp,0,s,s)
             end
         end

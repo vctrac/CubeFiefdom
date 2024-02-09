@@ -7,7 +7,7 @@ local keydown = love.keyboard.isDown
 CONFIG = {
     version = "0.4",
     app_name = "Cube Fiefdom",
-    save_name = "save_"--..os.date('%Y%m%d%H%M%S') --name defined by user
+    save_name = "save"--..os.date('%Y%m%d%H%M%S') --name defined by user
 }
 
 TILE_SIZE = 16
@@ -124,13 +124,13 @@ local function edit(id, translation)
     local is_cube = APP.get_type( id)
     if APP.selected_tool == "brush" then
         if is_cube == "cube" then
-            APP.map:paint_cube( id, MOUSE.texture)
+            APP.cubes:paint_cube( id, MOUSE.texture)
         end
     else
         if is_cube == "cube" then
-            APP.map:remove_cube( id)
+            APP.cubes:remove_cube( id)
         elseif is_cube == "empty" then
-            APP.map:add_cube( MOUSE.texture, unpack( translation))
+            APP.cubes:add_cube( MOUSE.texture, unpack( translation))
         end
     end
 end
@@ -212,7 +212,7 @@ local selected = {
 -- do
 --     local a = -0.505
 --     local b = 0.505
-    -- selected.cube = g3d.newModel(DATA.model.wired_cube)
+    -- selected.cube = g3d.newModel(RES.model.wired_cube)
 --         {a,a,a}, {b,a,a}, {b,a,a},
 --         {a,a,a}, {a,a,b}, {a,a,b},
 --         {b,a,b}, {a,a,b}, {a,a,b},
@@ -249,19 +249,19 @@ function love.load(...)
     APP.load()
     MOUSE.load()
 
-    sky = g3d.newModel(DATA.model.sphere, nil, {0,0,-50}, nil, 500)
-    sky.shader = love.graphics.newShader(g3d.shaderpath, DATA.shader["gradient"]) --gradient, grid, sky, clouds
+    sky = g3d.newModel(RES.model.sphere, nil, {0,0,-50}, nil, 500)
+    sky.shader = love.graphics.newShader(g3d.shaderpath, RES.shader["gradient"]) --gradient, grid, sky, clouds
     sky.shader:send("Time",5)
-    selected.cube = g3d.newModel(DATA.model.wired_cube)
-    camera.sprite = g3d.newSprite(DATA.image["camera"],{scale = 0.5})
-    pivot.model = g3d.newSprite(DATA.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
+    selected.cube = g3d.newModel(RES.model.wired_cube)
+    camera.sprite = g3d.newSprite(RES.image["camera"],{scale = 0.5})
+    pivot.model = g3d.newSprite(RES.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
 
     for id,_ in pairs(APP.texture) do
         HUD.new_texture_button(id)
     end
     
-    -- APP.map:add_info("0:0", "breakable", "true")
-    -- APP.map:add_info("0:2", "walkable", true)
+    -- APP.cubes:add_info("0:0", "breakable", "true")
+    -- APP.cubes:add_info("0:2", "walkable", true)
 end
 
 function love.update(dt)
@@ -297,7 +297,7 @@ function love.update(dt)
         end
     end
     if APP.toggle.light then
-        APP.map.light_shader:send("lightPosition", APP.first_person_view and camera.sprite.translation or camera.position)
+        APP.light_shader:send("lightPosition", APP.first_person_view and camera.sprite.translation or camera.position)
     end
 
     -- HUD:update(dt)
@@ -306,12 +306,15 @@ function love.update(dt)
     --- Draw to Canvas ---
     lg.setCanvas({APP.canvas, depth=true})
     lg.clear()
+    
     lg.setColor(1,1,1)
     sky:draw()
-    APP.map:draw()
-    APP.object:draw()
+    APP.cubes:draw()
+    APP.objects:draw()
     pivot.model:draw()
     MOUSE.draw()
+
+    lg.setColor(1,1,1)
     if APP.first_person_view then
         camera.sprite:draw()
     else

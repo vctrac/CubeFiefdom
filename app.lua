@@ -1,5 +1,6 @@
 local lg = love.graphics
 local file_handler = require"core.modules.file_handler"
+local new_info = require"core.modules.info"
 --convert a quad from an imageData to a drawable image
 local function Image_from_quad(source, x,y,w,h)
     local nid = love.image.newImageData(w, h)
@@ -7,6 +8,7 @@ local function Image_from_quad(source, x,y,w,h)
 
     return lg.newImage(nid)
 end
+
 local change_index = 0
 local undo_list = {}
 local redo_list = {}
@@ -14,9 +16,9 @@ local pixel_scale = 4
 local types = {cube=1, object=1}
 
 APP = {
-    map = require"scene",
-    object = require"core.modules.object",
-    info = require"core.modules.info",
+    cubes = require"scene",
+    objects = require"core.modules.object",
+    -- object_info = require"core.modules.info",
     toggle = {light=true, grid=false, texture=true, retro=false},
     atlas = nil,
     texture = {},
@@ -32,9 +34,12 @@ APP = {
     selected_tool = "pencil"
 }
 function APP.load()
-    
-    APP.retro_shader = lg.newShader(DATA.shader.scanlines) --scanlines, dithering
+    -- err()
+    file_handler:init()
 
+    APP.retro_shader = lg.newShader(RES.shader.scanlines) --scanlines, dithering
+    APP.light_shader = lg.newShader(g3d.shaderpath, RES.shader.lighting)
+    -- light_shader = love.graphics.newShader(g3d.shaderpath, RES.shader.lighting)
     APP.load_texture("tex.png")
     
     APP.atlas = lg.newCanvas(128,128)
@@ -45,14 +50,15 @@ function APP.load()
     APP.canvas_normal = lg.newCanvas(APP.width, APP.height)
     APP.canvas_small = lg.newCanvas(APP.width/pixel_scale, APP.height/pixel_scale)
     APP.canvas = APP.canvas_normal
-
-    APP.map:new()
+    APP.tile_info = new_info()
+    APP.selected_info = new_info()
+    APP.cubes:new()
 end
 
 function APP.clear()
     change_index = 0
-    APP.map:clear()
-    APP.map:new()
+    APP.cubes:clear()
+    APP.cubes:new()
 end
 
 function APP.load_texture(filename)
@@ -88,7 +94,7 @@ function APP.get(id)
         return false
     end
 
-    return APP.object.list[index] or APP.map.list[index]
+    return APP.objects.list[index] or APP.cubes.list[index]
 end
 
 --Returns either object, cube, empty or nil
@@ -96,7 +102,7 @@ end
 ---@return string type
 function APP.get_type(id)
     if type(id)~="string" then return "false" end
-    return (APP.object.list[id] and "object") or (APP.map.list[id] and "cube") or "empty"
+    return (APP.objects.list[id] and "object") or (APP.cubes.list[id] and "cube") or "empty"
 end
 
 function APP.add_change(tab)--{type, cmd, position_index, texture}
@@ -133,9 +139,9 @@ function APP.redo()
     undo_list[change_index] = string
     table.remove(redo_list, ni)
     if t=="cube" then
-        APP.map.redo(op)
+        APP.cubes.redo(op)
     elseif t=="object" then
-        APP.object.redo(op)
+        APP.objects.redo(op)
     end
 end
 
@@ -157,9 +163,9 @@ function APP.undo( )
     change_index = math.max(0, change_index-1)
 
     if t=="cube" then
-        APP.map.undo(op)
+        APP.cubes.undo(op)
     elseif t=="object" then
-        APP.object.undo(op)
+        APP.objects.undo(op)
     end
 end
 
@@ -168,25 +174,38 @@ function APP.cube_map_history(name) --used for undo and redo features in hud.lua
 end
 
 function APP.save_lua()
-    file_handler.save("lua", APP.map, APP.info.save_data(), CONFIG.save_name)
+    local data = {}
+    data.cubes = APP.cubes.list
+    data.cube_count = APP.cubes.count
+    data.objects = APP.objects.list
+    data.object_count = APP.objects.count
+
+    file_handler.save("lua", data, APP.tile_info:save_data(), CONFIG.save_name)
 end
 
 function APP.save_json()
-    file_handler.save("json", APP.map, APP.info.save_data(), CONFIG.save_name)
+    local data = {}
+    data.cubes = APP.cubes.list
+    data.cube_count = APP.cubes.count
+    data.objects = APP.objects.list
+    data.object_count = APP.objects.count
+
+    file_handler.save("json", data, APP.info:save_data(), CONFIG.save_name)
 end
 
 function APP.save_obj()
-    file_handler.save("obj", APP.map, CONFIG.save_name)
+
+    file_handler.save("obj", APP.cubes.model.verts, CONFIG.save_name)
 end
 
 function APP.drop_file(filename, ext)
-    print(filename, ext)
-	if file_handler[ext] then
-        print"exist"
-        if ext=="obj" then return end
+	if file_handler[ext] and ext~="obj" then
         local data = file_handler.load(ext, filename)
-        APP.map:load_data(data)
-        APP.info.load_data(data)
+        APP.cubes:load_data(data)
+        APP.objects:load_data(data)
+        APP.tile_info:load_data(data)
+        APP.selected_info:load_data(data)
+        data = nil
     end
 end
 function APP.resize_screen(w, h)

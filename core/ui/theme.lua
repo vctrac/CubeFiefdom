@@ -1,22 +1,26 @@
 return {
     tab = {
-        active_color = {0.165,0.165,0.165,1},
-        inactive_color = {0, 0, 0, 1},
-        text_color = {1,1,1, 1},
+        background = "zeus",
+        text_color = "white",
     },
     button = {
-        on   = {1,1,1,0.75},
-        off  = {0.6,0.6,1,0.75},
-        on_over = {1,1,1,1},
-        off_over = {0.8,0.8,0.8,1},
-        click = {1,1,0,1},
-        background = {0,0,0,1},
+        on   = "light_grey_blue",
+        off  = "jet_grey",
+        on_over = "white",
+        off_over = "white",
+        click = "dull_red",
+        background = "black",
+        text = "white",
     },
     label = {
-        foreground = {0.45,0.45,0.85},
-        highlight = {0.2,0.2,0.3},
-        click = {0.3,0.3,0.2},
-        background = {0.165,0.165,0.165,1},
-        text = {1,1,0.8}
-    }
+        foreground = "horizon",
+        highlight = "jet_grey",
+        click = "jet_grey",
+        background = "zeus",
+        text = "white"
+    },
+    text_input = {
+        active = "dark_gray_blue",
+        inactive = "deep_coffee"
+    },
 }

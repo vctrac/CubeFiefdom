@@ -1,5 +1,5 @@
 
-local aabb_model = g3d.newModel(DATA.model.cube)
+local aabb_model = g3d.newModel(RES.model.cube)
 ---@diagnostic disable-next-line: undefined-field
 aabb_model:generateAABB()
 
@@ -9,7 +9,6 @@ local tile_column_size = 8
 local Scene = {
     list = {},
     model = nil,
-    light_shader = love.graphics.newShader(g3d.shaderpath, DATA.shader.lighting),
     count = 0,
 }
 
@@ -120,7 +119,7 @@ Scene.new=function(self)
 end
 Scene.load_data=function(self, data)
     self:clear()
-    self.count = data.count
+    self.count = data.cube_count
     
     for _,k in ipairs(data.cubes) do
         local kpos = {k[1],k[2],k[3]}
@@ -225,7 +224,6 @@ Scene.undo = function(op)
     end
 end
 Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
-    -- return false
     local m = math.huge
     local n, p
     for i,k in pairs(self.list) do
@@ -242,18 +240,10 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
 end
 
 Scene.draw = function(self)
-    local s = APP.toggle.light and self.light_shader
+    local s = APP.toggle.light and APP.light_shader
     local t = APP.toggle.texture
     local g = APP.toggle.grid
     
-    -- for i,k in pairs(self.list) do
-
-        -- love.graphics.setColor(1,1,1)
-        -- if t then-- and not self.alpha_ids[i]then
-        --     k:draw(s)
-        -- end
-        
-        -- love.graphics.setColor(0,0,0)
     if t then
         love.graphics.setColor(1,1,1)
         self.model:draw(s)
@@ -265,12 +255,6 @@ Scene.draw = function(self)
         self.model:draw( )
         love.graphics.setWireframe(false)
     end
-    -- end
-    
-    -- for i,k in pairs(self.alpha_ids) do
-    --     love.graphics.setColor(1,1,1)
-    --     self.list[i]:draw( )
-    -- end
 end
 
 return Scene

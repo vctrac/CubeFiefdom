@@ -27,11 +27,6 @@ local function get_side(pos, npos)
     return npos
 end
 
----@TODO: a way to edit multiple cubes at the same time
--- maybe holding [ctrl] and dragging and/or left_clicking the mouse
--- the cubes will be edited after releasing [ctrl]
--- have to consider how it will work with UNDO/REDO
-
 MOUSE = {
     old_x = 0,
     old_y = 0,
@@ -49,9 +44,9 @@ MOUSE = {
 }
 
 function MOUSE.load()
-    current_cube = g3d.newModel(DATA.model.wired_cube)
-    new_cube = g3d.newModel(DATA.model.cube, nil)
-    new_object = g3d.newSprite(DATA.image"object",{scale = 0.5})
+    current_cube = g3d.newModel(RES.model.wired_cube)
+    new_cube = g3d.newModel(RES.model.cube, nil)
+    new_object = g3d.newSprite(RES.image"object",{scale = 0.5})
     MOUSE:set_texture("0:0")
 end
 
@@ -63,8 +58,8 @@ MOUSE.get_cube_under = function( )
     local cp = vec3(unpack(camera.position))
     local ray = camera.getMouseRay()
     local obj = false
-    local nearest, position, distance = APP.map:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
-    local nearest2, position2, distance2 = APP.object:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z, distance)
+    local nearest, position, distance = APP.cubes:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z)
+    local nearest2, position2, distance2 = APP.objects:cast_ray(cp.x, cp.y, cp.z, ray.x, ray.y, ray.z, distance)
     -- print(distance, distance2)
     if nearest2 and distance2<distance then
         nearest = nearest2
@@ -75,7 +70,7 @@ MOUSE.get_cube_under = function( )
         local hit_position = vec3(position)
         
         MOUSE.set_mode("edit")
-        local nearest_position = vec3((obj and APP.object.list[nearest] or APP.map.list[nearest]).position)
+        local nearest_position = vec3((obj and APP.objects.list[nearest] or APP.cubes.list[nearest]).position)
         local result_position = get_side(hit_position, nearest_position)
         MOUSE.selected = { new = result_position, id = nearest}
         
@@ -120,9 +115,9 @@ local mouse_tools = {
         pencil = function(mx,my,mb)
             if MOUSE.mode == "edit" then
                 if mb==1 then
-                    APP.map:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
+                    APP.cubes:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
                 elseif mb==2 then
-                    if APP.map:remove_cube(MOUSE.selected.id) then
+                    if APP.cubes:remove_cube(MOUSE.selected.id) then
                         MOUSE.set_mode"wait"
                     end
                 end
@@ -132,9 +127,9 @@ local mouse_tools = {
             if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
+                APP.cubes:paint_cube(MOUSE.selected.id, MOUSE.texture)
             elseif mb==2 then
-                local cube = APP.map:get_cube( MOUSE.selected.id)
+                local cube = APP.cubes:get_cube( MOUSE.selected.id)
                 if not cube then return end
                 MOUSE:set_texture(cube.texture)
             end
@@ -143,10 +138,11 @@ local mouse_tools = {
             if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                -- APP.map:paint_cube(MOUSE.selected.id, MOUSE.texture)
-                print("selected", MOUSE.selected.id)
+                -- APP.cubes:paint_cube(MOUSE.selected.id, MOUSE.texture)
+                local isObject = APP.objects:get(MOUSE.selected.id)
+                print("selected", (isObject and "object : " or "cube : ") ..MOUSE.selected.id)
             -- elseif mb==2 then
-                -- local cube = APP.map:get_cube( MOUSE.selected.id)
+                -- local cube = APP.cubes:get_cube( MOUSE.selected.id)
                 -- if not cube then return end
                 -- MOUSE:set_texture(cube.texture)
             end
@@ -155,12 +151,12 @@ local mouse_tools = {
             if MOUSE.mode~="edit" then return end
             
             if mb==1 then
-                APP.object:add(MOUSE.selected.new:unpack())
+                APP.objects:add(MOUSE.selected.new:unpack())
                 -- print("object added at", MOUSE.selected.new:unpack())
             elseif mb==2 then
-                APP.object:remove(MOUSE.selected.id)
+                APP.objects:remove(MOUSE.selected.id)
                 -- print("object removed at", MOUSE.selected.new:unpack())
-                -- local cube = APP.map:get_cube( MOUSE.selected.id)
+                -- local cube = APP.cubes:get_cube( MOUSE.selected.id)
                 -- if not cube then return end
                 -- MOUSE:set_texture(cube.texture)
             end

@@ -1,6 +1,6 @@
 local format = string.format
 local abs = math.abs
-local function save_obj(map, name, flip)
+local function save_obj(verts, name, flip)
 
     local txt = "mtllib "..name..".mtl"
     txt = txt .."\no "..name
@@ -14,7 +14,7 @@ local function save_obj(map, name, flip)
     local v, f = {}, {}
     local vn, vt = {}, {}
 
-    for i,m in ipairs(map.model.verts) do
+    for i,m in ipairs(verts) do
         -- to avoid -0 values
         local x = m[1]==0 and 0 or m[1]
         local y = m[2]==0 and 0 or m[2]
@@ -30,7 +30,7 @@ local function save_obj(map, name, flip)
         y = m[5]==0 and 0 or m[5]
         id = format("%.6f,%.6f", x, y)
         if not texture[id] then
-            vt[#vt+1] = {x, flip and 1-y or y} -- use flip to export for blender
+            vt[#vt+1] = {x, flip and 1-y or y} -- use flip if exporting to blender and such
             texture[id]= #vt
         end
         local ft = texture[id]
@@ -86,7 +86,7 @@ local function save_obj(map, name, flip)
     txt = txt .. "\nNi 0.000000"
     txt = txt .. "\nd 1.000000"
     txt = txt .. "\nillum 1"
-    txt = txt .. "\nmap_Kd "..name..".png"
+    txt = txt .. "\nmap_Kd atlas.png"
 
     local mtl = io.open(name ..".mtl", "w")
     -- assert(mtl,"could not open "..name ..".mtl file")

@@ -13,13 +13,13 @@ return function(tools, button_size, label_height)
         local save_lua = Button.label(scn, "save as lua", "left", APP.save_lua)
         local save_json = Button.label(scn, "save as json", "left", APP.save_json)
         local save_obj = Button.label(scn, "save as obj", "left", APP.save_obj)
-        self.props.show = true
-        self.props.height = label_height*5
+        self.props.show = false
+        self.props.height = lh4
         self.props.max_height = label_height*5
         local minimize_btn = minimize_button( scn, self.props, lh4)
         local minimize_btn_size = 16
         return function(_,x,y,w,h)
-            g.setColor(theme.tab.active_color)
+            g.setColor(RES.palette[ theme.tab.background])
             g.rectangle("fill", x, y, w, self.props.height)
             files_label:render(x, y, w, label_height)
             minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)

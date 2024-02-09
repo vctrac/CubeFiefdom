@@ -6,9 +6,9 @@ local function lb(scene, name, value, f)
     local l= i.defineElement(function(self)
         self.props.color = "background"
         return function(_, x, y, w, h)
-            g.setColor(t.label[self.props.color])
+            g.setColor(RES.palette[ t.label[self.props.color]])
             g.rectangle("fill",x,y,w,h)
-            g.setColor(t.label.text)
+            g.setColor(RES.palette[ t.label.text])
             g.printf(name,x,y,w,"left")
             g.printf(value,x,y,w,"right")
         end

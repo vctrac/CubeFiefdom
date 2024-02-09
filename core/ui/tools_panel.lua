@@ -35,12 +35,12 @@ return function(tools, button_size, label_height)
         local minimize_btn = minimize_button( scene, self.props, label_height+4)
         local minimize_btn_size = 16
         return function(_,x,y,w,h)
-            g.setColor(theme.tab.active_color)
+            g.setColor(RES.palette[ theme.tab.background])
             g.rectangle("fill", x, y, w, self.props.height)
             tools_label:render(x, y, w, label_height)
             minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
             if self.props.show then
-                g.setColor(1,1,1)
+                g.setColor(RES.palette.white)
                 local sx = x+button_size
                 y = y+label_height+4
                 for row=1,#tools.buttons do

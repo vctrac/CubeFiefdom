@@ -1,22 +1,24 @@
-local sprite = g3d.newSprite(DATA.image"object_card",{scale = 0.5})
-local block = g3d.newModel(DATA.model.wired_cube)
-local aabb_model = g3d.newModel(DATA.model.cube)
+local sprite = g3d.newSprite(RES.image"object_card",{scale = 0.5})
+local block = g3d.newModel(RES.model.wired_cube)
+local aabb_model = g3d.newModel(RES.model.cube)
 ---@diagnostic disable-next-line: undefined-field
 aabb_model:generateAABB()
-local white_color = {1,1,1}
 
 local o = {
     list = {},
     count = 0
 }
 
+---@param index string
+---@param position table
 local function add(index,position)
     o.count = o.count+1
-    o.list[index] = { position = position}
+    o.list[index] = { position = position, color= "white"}
     return true
 end
 
-local remove = function(index)
+---@param index string
+local function remove(index)
     o.count = o.count-1
     o.list[index] = nil
     return true
@@ -66,6 +68,23 @@ o.remove = function(self, id)
     return remove(index)
 end
 
+o.redo = function(op)
+    if op[1] == "remove" then--remove
+        remove(op[2])
+    elseif op[1] == "add" then--add
+        local ipos = From_id(op[2])
+        add(op[2], ipos)
+    end
+end
+o.undo = function(op)
+    if op[1] == "add" then--remove
+        remove(op[2])
+    elseif op[1] == "remove" then--add
+        local ipos = From_id(op[2])
+        add(op[2], ipos)
+    end
+end
+
 o.cast_ray = function(self, ox, oy, oz, tx, ty, tz, m)
     -- return false
     -- local m = math.huge
@@ -83,32 +102,37 @@ o.cast_ray = function(self, ox, oy, oz, tx, ty, tz, m)
     end
     return n, p, m
 end
+
+o.get = function(self,id)
+    assert(type(id)=="string", "id must be a string eg.:1:1:0")
+    return self.list[id]
+end
+
+o.load_data=function(self, data)
+    self:clear()
+    self.count = data.object_count
+    
+    for _,k in ipairs(data.objects) do
+        local kpos = {unpack(k.position)}
+        local kcor = k.color or "white"
+        local id = To_id(k.position)
+        
+        self.list[id] = { position = kpos, color = kcor}
+    end
+end
+
 o.draw = function(self)
-    -- local s = APP.toggle.light and self.light_shader
+    local s = APP.toggle.light and APP.light_shader
     local t = APP.toggle.texture
     local g = APP.toggle.grid
     
     if t then
-        
-        -- love.graphics.setMeshCullMode( "back" )
-        -- love.graphics.setWireframe(true)
-        love.graphics.setColor(1,1,1)
+        -- love.graphics.setColor(1,1,1)
         for _,m in pairs(self.list) do
-            -- love.graphics.setColor(m.color or white_color)
+            love.graphics.setColor(RES.palette[m.color])
             sprite:setTranslation(unpack(m.position))
-            sprite:draw( )
+            sprite:draw(s)
         end
-
-        -- love.graphics.setColor(0,1,0.5,0.3)
-        -- love.graphics.setWireframe(true)
-        -- for _,m in pairs(self.list) do
-        --     block:setTranslation(unpack(m.position))
-        --     block:draw( )
-        -- end
-        -- love.graphics.setWireframe(false)
-        
-        -- love.graphics.setWireframe(false)
-        -- love.graphics.setMeshCullMode( "none" )
     end
 
     if g then
@@ -116,7 +140,7 @@ o.draw = function(self)
         love.graphics.setWireframe(true)
         for _,m in pairs(self.list) do
             block:setTranslation(unpack(m.position))
-            block:draw( )
+            block:draw(s)
         end
         love.graphics.setWireframe(false)
     end
