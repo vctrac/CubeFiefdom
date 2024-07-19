@@ -239,7 +239,7 @@ Scene.cast_ray = function(self, ox, oy, oz, tx, ty, tz)
     return n, p, m
 end
 
-Scene.draw = function(self)
+Scene.draw = function(self, s)
     local s = APP.toggle.light and APP.light_shader
     local t = APP.toggle.texture
     local g = APP.toggle.grid

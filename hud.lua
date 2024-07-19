@@ -28,7 +28,7 @@ function hud:draw()
     hud.window_pos.w = tools.props.height
 end
 hud.load_tool_info = function( id)
-    Tools.load_tool_info(hud.scene, id)
+    Tools.load_texture_info(hud.scene, id)
 end
 hud.new_texture_button = function(name)
     return Tools.setTextureButtons(hud.scene, name)

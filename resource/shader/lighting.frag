@@ -14,9 +14,17 @@ vec4 effect(vec4 color, Image tex, vec2 texCoords, vec2 screenCoords) {
 
     float diffuse = max(dot(lightDirection, normal), 0);
 
+    // Ambient occlusion
+    // float ambientOcclusion = 1.0;
+
+    // Calculate ambient occlusion based on normal
+    // vec3 norm = normalize(Normal);
+    // float nDotView = dot(normal, normalize( worldPosition.xyz - lightPosition.xyz));
+    // ambientOcclusion = max(0.0, nDotView);
+
     vec4 texcolor = Texel(tex, texCoords);
     if (texcolor.a == 0) { discard; }
 
-    float lightness = diffuse + ambient;
+    float lightness = (diffuse + ambient);
     return vec4((texcolor * color).rgb * lightness, texcolor.a);
 }

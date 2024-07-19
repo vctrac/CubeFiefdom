@@ -7,11 +7,21 @@ local Info_button = require"core.ui.info_label_button"
 local Gradient_Label = require"core.ui.gradient_label"
 local button_size = 22
 local label_height = 16
-local text_inputs = { info = {}, object={}}
+local current_text_input = "texture"
+local text_inputs = {
+    -- current = "texture",
+    texture = {},
+    object={},
+}
 -- local Tools.buttons = {}
 -- local texture_buttons = {}
 local lg = love.graphics
 -- local blinking_cursor_timer = 0
+local info_data = {
+    texture = {},
+    object = {}
+}
+local panel_input = {}
 
 local Tools = {
     start_x = 4,
@@ -19,37 +29,38 @@ local Tools = {
     -- integer indexed table
     buttons = {},
     texture_buttons = {},
-    info = {},
+    -- texture_info = {},
+    -- object_info = {},
     info_count = 0,
-    active_info_text = {},
+    active_text = {},
+    current = "texture", --or "object"
     switch_tab = nil,
 }
 
 
 --radio function for text fields
-local function text_field_active( i)
-    for index,field in pairs(text_inputs.info) do
-        field.props.active = index==i
+local function text_field_active( index)
+    local t = text_inputs[ current_text_input]
+    for i,field in pairs( t) do
+        field.props.active = i==index
     end
 end
 local function text_field_get_active( )
-    return Tools.active_info_text.name=="key" and "value" or "key"
+    return Tools.active_text.name=="key" and "value" or "key"
 end
 
-local function Text_input(name, scene)
+local function Text_input( name, scene)
     local e = Inky.defineElement(function(self)
         self:onPointer("press", function(this)
             text_field_active( name)
-            Tools.active_info_text = {name = name, props = this.props}
+            Tools.active_text = {name = name, props = this.props}
         end)
         return function(_,x,y,w,h)
             local txt = self.props.txt
             if self.props.active then
                 txt = txt ..'|'
-                -- lg.setColor(0.1,0.3,0.3)
                 lg.setColor(RES.palette[ theme.text_input.active])
             else
-                -- lg.setColor(0.1,0.1,0.1)
                 lg.setColor(RES.palette[ theme.text_input.inactive])
             end
             lg.rectangle("fill", x,y,w,h)
@@ -59,10 +70,10 @@ local function Text_input(name, scene)
     end)
     return e(scene)
 end
-local function ok_pressed()
+local function ok_pressed( )
     -- print"ok"
-    local tik = text_inputs.info.key.props
-    local tiv = text_inputs.info.value.props
+    local tik = text_inputs[current_text_input].key.props
+    local tiv = text_inputs[current_text_input].value.props
 
     -- remove whitespace characters
     tik.old_txt = string.gsub(tik.old_txt, "%s", "")
@@ -71,40 +82,111 @@ local function ok_pressed()
 
     if #tik.txt==0 then return end
     if #tiv.txt==0 then tiv.txt = "false" end
-    if tik.txt ~= tik.old_txt then --esse
-        APP.tile_info:set_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
-        Tools.load_tool_info(Tools.scene, MOUSE.texture)
+    if Tools.current=="texture" then
+        if tik.txt ~= tik.old_txt then
+            APP.texture_info:set_key(MOUSE.texture,tik.old_txt, tik.txt, tiv.txt)
+            Tools.load_texture_info(Tools.scene, MOUSE.texture)
+        else
+            APP.texture_info:add(MOUSE.texture, tik.txt, tiv.txt)
+            Tools.new_info(Tools.scene, "texture", tik.txt, tiv.txt)
+        end
     else
-        APP.tile_info:add(MOUSE.texture, tik.txt, tiv.txt)
-        Tools.new_info(Tools.scene, tik.txt, tiv.txt)
+        if tik.txt ~= tik.old_txt then
+            APP.selected_info:set_key(MOUSE.selected.id,tik.old_txt, tik.txt, tiv.txt)
+            Tools.load_object_info(Tools.scene, MOUSE.selected.id)
+        else
+            APP.selected_info:add(MOUSE.selected.id, tik.txt, tiv.txt)
+            Tools.new_info(Tools.scene, "object", tik.txt, tiv.txt)
+        end
+        -- print(tik.txt, tiv.txt)
+        -- APP.selected_info:set_key(MOUSE.selected.id,tik.old_txt, tik.txt, tiv.txt)
+        -- Tools.new_info(Tools.scene, "object", tik.txt, tiv.txt)  ---@TODO create a function to save and load 
     end
-    Tools.info_panel_dialog.props.visible = false
-    text_inputs:clear()
+    panel_input[Tools.current].props.visible = false
+    text_inputs:clear( )
     MOUSE.set_mode"wait"
 end
-local function info_input_box(scene)
+
+local input_box = function(scene , type)
+    local e = Inky.defineElement(function(self)
+        self.props.name = "???"
+        self.props.type = type
+
+        text_inputs[type].key = Text_input( "key", scene)
+        text_inputs[type].key.props.txt = ""
+        text_inputs[type].key.props.old_txt = ""
+        text_inputs[type].value = Text_input( "value", scene)
+        text_inputs[type].value.props.txt = ""
+
+        local btn_ok = Button.button(scene, "ok", function() ok_pressed( ) end)
+        local btn_cancel = Button.button(scene, "cancel", function()
+            text_inputs:clear( )
+            self.props.visible = false
+            MOUSE.set_mode"wait"
+        end)
+        local btn_discard = Button.button(scene, "discard", function()
+            print(type)
+            if type == "texture" then
+                APP.texture_info:remove(MOUSE.texture, text_inputs[type].key.props.txt)
+                Tools.load_texture_info(scene, MOUSE.texture)
+            else
+                APP.selected_info:remove(MOUSE.selected.id, text_inputs[type].key.props.txt)
+                Tools.load_object_info(Tools.scene, MOUSE.selected.id)
+            end
+            self.props.visible = false
+            text_inputs:clear( )
+            MOUSE.set_mode"wait"
+        end)
+        local btn_size = 16
+        return function(_,x,y,w,h)
+            lg.setColor(RES.palette.zeus)
+            lg.rectangle("fill", x,y,w,h)
+            lg.setColor(RES.palette.white)
+            lg.printf(string.format("[ %s ]", self.props.name), x, y, w, "center")
+
+            local yy = y+btn_size+4
+            lg.printf("variable name:", x, yy, w, "left")
+            yy = yy+btn_size+4
+            --txt_input
+            text_inputs[self.props.type].key:render(x,yy,w,btn_size)
+            yy = yy+btn_size+4
+            lg.printf("value:", x, yy, w, "left")
+            yy = yy+btn_size+4
+            --txt_input
+            text_inputs[self.props.type].value:render(x,yy,w,btn_size)
+            -- yy = y+btn_size
+            btn_ok:render(x+4,y+h-btn_size-4,btn_size,btn_size)
+            btn_discard:render(x+(w-btn_size)*0.5,y+h-btn_size-4,btn_size,btn_size)
+            btn_cancel:render(x+w-btn_size-4,y+h-btn_size-4,btn_size,btn_size)
+        end
+    end)
+    return e(scene)
+end
+
+local function info_input_box(scene, type)
     local e = Inky.defineElement(function(self)
         -- self.props.active = true
         -- print"rolou"
-        text_inputs.info.key = Text_input("key", scene)
-        text_inputs.info.key.props.txt = ""
-        text_inputs.info.key.props.old_txt = ""
-        text_inputs.info.value = Text_input("value", scene)
-        text_inputs.info.value.props.txt = ""
-        -- text_inputs.info.value.props.old_txt = ""
-        local btn_ok = Button.button(scene, "ok", ok_pressed)
+        -- text_inputs:setup( scene)
+        text_inputs[type].key = Text_input( "key", scene)
+        text_inputs[type].key.props.txt = ""
+        text_inputs[type].key.props.old_txt = ""
+        text_inputs[type].value = Text_input( "value", scene)
+        text_inputs[type].value.props.txt = ""
+        -- text_inputs[k].value.props.old_txt = ""
+        local btn_ok = Button.button(scene, "ok", function() ok_pressed( ) end)
         local btn_cancel = Button.button(scene, "cancel", function()
             -- print"cancel"
-            text_inputs:clear()
+            text_inputs:clear( )
             self.props.visible = false
             MOUSE.set_mode"wait"
         end)
         local btn_discard = Button.button(scene, "discard", function() --esse
             -- print"discard"
-            APP.tile_info:remove(MOUSE.texture, text_inputs.info.key.props.txt)
+            APP.texture_info:remove(MOUSE.texture, text_inputs[type].key.props.txt)
             Tools.load_tool_info(scene, MOUSE.texture)
             self.props.visible = false
-            text_inputs:clear()
+            text_inputs:clear( )
             MOUSE.set_mode"wait"
         end)
         local btn_size = 16
@@ -118,12 +200,12 @@ local function info_input_box(scene)
             lg.printf("variable name:", x, yy, w, "left")
             yy = yy+btn_size+4
             --txt_input
-            text_inputs.info.key:render(x,yy,w,btn_size)
+            text_inputs[type].key:render(x,yy,w,btn_size)
             yy = yy+btn_size+4
             lg.printf("value:", x, yy, w, "left")
             yy = yy+btn_size+4
             --txt_input
-            text_inputs.info.value:render(x,yy,w,btn_size)
+            text_inputs[type].value:render(x,yy,w,btn_size)
             -- yy = y+btn_size
             btn_ok:render(x+4,y+h-btn_size-4,btn_size,btn_size)
             btn_discard:render(x+(w-btn_size)*0.5,y+h-btn_size-4,btn_size,btn_size)
@@ -133,38 +215,55 @@ local function info_input_box(scene)
     return e(scene)
 end
 
-text_inputs.clear = function(self)
-    self.info.key.props.txt = ""
-    self.info.key.props.old_txt = ""
-    self.info.value.props.txt = ""
+text_inputs.clear = function(self )
+    self[current_text_input].key.props.txt = ""
+    self[current_text_input].key.props.old_txt = ""
+    self[current_text_input].value.props.txt = ""
     text_field_active( "key")
 end
-
-Tools.clear_info=function()
-    for key in pairs(Tools.info) do
-        Tools.info[key] = nil
-    end
-    Tools.info = {}
+text_inputs.set_up = function(scene, t)
+    text_inputs[t].key = Text_input( "key", scene)
+    text_inputs[t].key.props.txt = ""
+    text_inputs[t].key.props.old_txt = ""
+    text_inputs[t].value = Text_input( "value", scene)
+    text_inputs[t].value.props.txt = ""
 end
 
-Tools.load_tool_info = function(scene, id) --esse
-    Tools.clear_info()
-    local info = APP.tile_info:get(id)
+Tools.clear_info=function(type)
+    for key in pairs(info_data[type]) do
+        info_data[type][key] = nil
+    end
+    print(type)
+    info_data[type] = {}
+end
+
+Tools.load_texture_info = function(scene, id) --esse
+    Tools.clear_info("texture")
+    local info = APP.texture_info:get(id)
     for k,v in pairs(info) do
-        Tools.new_info(scene, k, v)
+        Tools.new_info(scene, "texture", k, v)
+    end
+end
+
+Tools.load_object_info = function(scene, id) --esse
+    Tools.clear_info("object")
+    local info = APP.selected_info:get(id)
+    for k,v in pairs(info) do
+        Tools.new_info(scene, "object", k, v)
     end
 end
 
 ---@param scene table Inky scene
+---@param type string info type
 ---@param key string key|value
 ---@param value boolean|number|string info value
-Tools.new_info = function( scene, key, value) --esse
-    Tools.info[key] = Info_button(scene, key, tostring(value),
+Tools.new_info = function( scene, type, key, value) --esse
+    info_data[type][key] = Info_button(scene, key, tostring(value),
     function(self)
-        Tools.info_panel_dialog.props.visible = true
-        text_inputs.info.key.props.txt = key
-        text_inputs.info.key.props.old_txt = key
-        text_inputs.info.value.props.txt = tostring(value)
+        panel_input[type].props.visible = true
+        text_inputs[type].key.props.txt = key
+        text_inputs[type].key.props.old_txt = key
+        text_inputs[type].value.props.txt = tostring(value)
         MOUSE.set_mode"hud_dialog"
     end)
 end
@@ -193,33 +292,33 @@ Tools.setTextureButtons = function(scene, name)
 end
 
 Tools.textinput = function( t)
-    if Tools.active_info_text.name then
-        local txt = Tools.active_info_text.props.txt
+    if Tools.active_text.name then
+        local txt = Tools.active_text.props.txt
         local len = utf8.len(txt)
         if len==9 then
             txt = string.sub(txt,1, len-1)
         end
-        Tools.active_info_text.props.txt = txt .. t
+        Tools.active_text.props.txt = txt .. t
     end
 end
 Tools.keypressed = function( key)
     if key == "backspace" then
-        local txt = Tools.active_info_text.props.txt
+        local txt = Tools.active_text.props.txt
         local len = utf8.len(txt)
         if len>0 then
-            Tools.active_info_text.props.txt = string.sub(txt, 1, len - 1)
+            Tools.active_text.props.txt = string.sub(txt, 1, len - 1)
         end
     elseif key == "return" or key == "tab" then
         local name = text_field_get_active()
         if name=="key" and key=="return" then
             ok_pressed()
         else
-            text_field_active(name)
-            Tools.active_info_text = {name = name, props = text_inputs.info[name].props}
+            text_field_active( name)
+            Tools.active_text = {name = name, props = text_inputs[current_text_input][name].props}
         end
     elseif key == "escape" then
         text_inputs:clear()
-        Tools.info_panel_dialog.props.visible = false
+        panel_input[Tools.current].props.visible = false
         MOUSE.set_mode"wait"
     end
 end
@@ -237,9 +336,11 @@ local info_panel = Inky.defineElement(function(self, scene)
     local lhp4 = label_height+4
     local infos_label = Gradient_Label(scene, "TILE INFO")
     local add_info = Button.label(scene, "new", "center",function()
+        Tools.current = "texture"
+        current_text_input = "texture"
         text_field_active( "key")
-        Tools.active_info_text = {name = "key", props = text_inputs.info.key.props}
-        Tools.info_panel_dialog.props.visible = true
+        Tools.active_text = {name = "key", props = text_inputs.texture.key.props}
+        panel_input.texture.props.visible = true
         MOUSE.set_mode"hud_dialog"
     end)
     self.props.height = lhp4
@@ -255,7 +356,7 @@ local info_panel = Inky.defineElement(function(self, scene)
         if self.props.show then
             y = y+lhp4
             local count = 2.5
-            for _,lb in pairs(Tools.info) do
+            for _,lb in pairs(info_data.texture) do
                 lb:render(x, y, w-5, label_height)
                 y = y+label_height+1
                 count = count+1
@@ -272,6 +373,19 @@ end)
 local object_panel = Inky.defineElement(function(self, scene)
     local infos_label = Gradient_Label(scene, "OBJECT INFO")
     local lhp4 = label_height+4
+
+    local add_info = Button.label(scene, "new", "center",function()
+        local isObject = APP.objects:get(MOUSE.selected.id)
+        if isObject then
+            Tools.current = "object"
+            current_text_input = "object"
+            text_field_active( "key")
+            Tools.active_text = {name = "key", props = text_inputs.object.key.props}
+            panel_input.object.props.visible = true
+            MOUSE.set_mode"hud_dialog"
+        end
+    end)
+
     self.props.height = lhp4
     self.props.max_height = label_height*2.5
     self.props.show = false
@@ -282,22 +396,27 @@ local object_panel = Inky.defineElement(function(self, scene)
         lg.rectangle("fill", x, y, w, self.props.height)
         infos_label:render(x, y, w, label_height)
         minimize_btn:render(x+w-button_size,y,minimize_btn_size,minimize_btn_size)
-        -- if self.props.show then
-            -- y = y+label_height+4
-            -- local count = 2.5
-            -- for _,lb in pairs(Tools.info) do
-            --     lb:render(x, y, w-5, label_height)
-            --     y = y+label_height+1
-            --     count = count+1
-            -- end
-            -- self.props.height = count*label_height
-        -- end
+        if self.props.show then
+            y = y+label_height+4
+            local count = 2.5
+            for _,lb in pairs(info_data.object) do
+                lb:render(x, y, w-5, label_height)
+                y = y+label_height+1
+                count = count+1
+            end
+            self.props.height = count*label_height
+            y = y+1
+            --draw add_info button
+            add_info:render(x, y, w, label_height)
+        end
     end
 end)
 ----------------------------------------------------------------------------DRAW EVERYTHING
 Tools.element = Inky.defineElement(function(self, scene)
-    Tools.info_panel_dialog = info_input_box(scene)
-    Tools.info_panel_dialog:render(1,1,1,1)
+    panel_input.texture = input_box(scene, "texture")
+    panel_input.texture:render(1,1,1,1)
+    panel_input.object = input_box(scene, "object")
+    panel_input.object:render(1,1,1,1)
     Tools.scene = scene
 
     local files = files_panel(Tools, button_size, label_height)
@@ -306,7 +425,7 @@ Tools.element = Inky.defineElement(function(self, scene)
     local info = info_panel(scene)
     local object = object_panel(scene)
 
-    local info_panel_height = 128
+    local dialog_panel_height = 128
     return function(_,x,y,w,h)
         local sy = y
 
@@ -330,8 +449,12 @@ Tools.element = Inky.defineElement(function(self, scene)
         object:render(x, sy, w, h)
         sy = sy + object.props.height
 
-        if Tools.info_panel_dialog.props.visible then
-            Tools.info_panel_dialog:render(x+w+5, y+h-info_panel_height, w, info_panel_height)
+        if panel_input.texture.props.visible then
+            panel_input.texture:render(x+w+5, sy-dialog_panel_height, w, dialog_panel_height)
+        end
+
+        if panel_input.object.props.visible then
+            panel_input.object:render(x+w+5, sy-dialog_panel_height, w, dialog_panel_height)
         end
 
         self.props.height = sy

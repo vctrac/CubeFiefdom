@@ -39,7 +39,7 @@ function APP.load()
 
     APP.retro_shader = lg.newShader(RES.shader.scanlines) --scanlines, dithering
     APP.light_shader = lg.newShader(g3d.shaderpath, RES.shader.lighting)
-    -- light_shader = love.graphics.newShader(g3d.shaderpath, RES.shader.lighting)
+    
     APP.load_texture("tex.png")
     
     APP.atlas = lg.newCanvas(128,128)
@@ -50,7 +50,7 @@ function APP.load()
     APP.canvas_normal = lg.newCanvas(APP.width, APP.height)
     APP.canvas_small = lg.newCanvas(APP.width/pixel_scale, APP.height/pixel_scale)
     APP.canvas = APP.canvas_normal
-    APP.tile_info = new_info()
+    APP.texture_info = new_info()
     APP.selected_info = new_info()
     APP.cubes:new()
 end
@@ -180,7 +180,7 @@ function APP.save_lua()
     data.objects = APP.objects.list
     data.object_count = APP.objects.count
 
-    file_handler.save("lua", data, APP.tile_info:save_data(), CONFIG.save_name)
+    file_handler.save("lua", data, APP.texture_info:save_data(), CONFIG.save_name)
 end
 
 function APP.save_json()
@@ -203,7 +203,7 @@ function APP.drop_file(filename, ext)
         local data = file_handler.load(ext, filename)
         APP.cubes:load_data(data)
         APP.objects:load_data(data)
-        APP.tile_info:load_data(data)
+        APP.texture_info:load_data(data)
         APP.selected_info:load_data(data)
         data = nil
     end

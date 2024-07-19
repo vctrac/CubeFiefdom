@@ -239,19 +239,17 @@ local selected = {
 -- ##     ## ##     ## #### ##    ## 
 --------------------------------------------------------------------------------------
 
-local day_time = 0 --used to control the skysphere shader
+local day_time = 9 --used to control the skysphere shader
 local day_time_multiplier = 1
 
 function love.load(...)
-
-    -- lg.setBackgroundColor(0.502,0.502,1)
 
     APP.load()
     MOUSE.load()
 
     sky = g3d.newModel(RES.model.sphere, nil, {0,0,-50}, nil, 500)
-    sky.shader = love.graphics.newShader(g3d.shaderpath, RES.shader["gradient"]) --gradient, grid, sky, clouds
-    sky.shader:send("Time",5)
+    sky.shader = love.graphics.newShader(g3d.shaderpath, RES.shader["sky"]) --gradient, grid, sky, clouds
+    sky.shader:send("Time",12)
     selected.cube = g3d.newModel(RES.model.wired_cube)
     camera.sprite = g3d.newSprite(RES.image["camera"],{scale = 0.5})
     pivot.model = g3d.newSprite(RES.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
@@ -297,13 +295,12 @@ function love.update(dt)
         end
     end
     if APP.toggle.light then
-        APP.light_shader:send("lightPosition", APP.first_person_view and camera.sprite.translation or camera.position)
+        APP.light_shader:send("lightPosition", camera.position)
     end
 
     -- HUD:update(dt)
     -- MOUSE.stopped = true
 
-    --- Draw to Canvas ---
     lg.setCanvas({APP.canvas, depth=true})
     lg.clear()
     
@@ -341,6 +338,7 @@ function love.draw()
     ---@DEBUG
     lg.setColor(1,1,1)
     lg.printf(MOUSE.mode,0, APP.height-35, APP.width,"right")
+    lg.printf(MOUSE.selected.id,0, APP.height-50, APP.width,"right")
     -- lg.printf(tostring(love.timer.getFPS( )),0, APP.height-14, APP.width,"right")
     -- lg.printf( day_time, 0, APP.height-24, APP.width,"right")
 end

@@ -13,6 +13,12 @@ function printf( s, ...)
     old_print(string.format("%s %d : %s",filename, info.currentline, fs))
 end
 
+function Is_table_empty(t)
+    for _ in pairs(t) do
+        return false
+    end
+    return true
+end
 --- Converts a table of Coordinates to string ID like "0:0:0"
 ---@function To_id
 ---@param coords table

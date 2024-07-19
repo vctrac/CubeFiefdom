@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------TOOLS PANEL
 
 local Inky = require"library.Inky"
-local Button = require"core.ui.button"
+-- local Button = require"core.ui.button"
 local minimize_button = require"core.ui.minimize_button"
 local theme = require"core.ui.theme"
 local Gradient_Label = require"core.ui.gradient_label"

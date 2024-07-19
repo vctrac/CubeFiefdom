@@ -75,11 +75,7 @@ local function info()
             self.list[id][old_key] = nil
             
             --check if list for this id is empty
-            local c = 0
-            for _ in pairs(self.list[id]) do
-                c = c +1
-            end
-            if c==0 then self.list[id] = nil end
+            if Is_table_empty(self.list[id]) then self.list[id] = nil end
         end
         if type(i)=="string" and i~='' then
             self:add(i,k,v)
