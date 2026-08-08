@@ -95,6 +95,20 @@ RES.model.wired_cube = {
     {b,a,b}, {b,b,b}, {b,b,b},
 }
 
+-- Wired ramp model (wedge shape for visualization)
+RES.model.wired_ramp = {
+    -- Base edges
+    {a,a,a}, {b,a,a}, {b,a,a},
+    {a,a,a}, {a,b,a}, {a,b,a},
+    {b,a,a}, {b,b,a}, {b,b,a},
+    {a,b,a}, {b,b,a}, {b,b,a},
+    
+    -- Top edges (ramp goes from base to +1 height)
+    {a,b,a}, {b,b,b}, {b,b,b},
+    {b,b,a}, {b,b,b}, {b,b,b},
+    {a,b,a}, {b,b,b}, {b,b,b},
+}
+
 setmetatable(RES.image, {
     __call = function(self, i)
         return self[i] or self.no_texture

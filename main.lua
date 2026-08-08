@@ -53,6 +53,8 @@ local Key = {
     shift = false
 }
 
+local ramp_mode = false  -- Toggle for placing ramps instead of cubes
+
 local cam_controls = {
     rotating_speed = 10,
     theta = 90,
@@ -121,16 +123,24 @@ local pivot = {
 ---@param id string
 ---@param translation table
 local function edit(id, translation)
-    local is_cube = APP.get_type( id)
+    local is_type = APP.get_type(id)
     if APP.selected_tool == "brush" then
-        if is_cube == "cube" then
-            APP.cubes:paint_cube( id, MOUSE.texture)
+        if is_type == "cube" then
+            APP.cubes:paint_cube(id, MOUSE.texture)
+        elseif is_type == "ramp" then
+            APP.ramps:paint_ramp(id, MOUSE.texture)
         end
     else
-        if is_cube == "cube" then
-            APP.cubes:remove_cube( id)
-        elseif is_cube == "empty" then
-            APP.cubes:add_cube( MOUSE.texture, unpack( translation))
+        if is_type == "cube" then
+            APP.cubes:remove_cube(id)
+        elseif is_type == "ramp" then
+            APP.ramps:remove_ramp(id)
+        elseif is_type == "empty" then
+            if ramp_mode then
+                APP.ramps:add_ramp(MOUSE.texture, unpack(translation), 0)
+            else
+                APP.cubes:add_cube(MOUSE.texture, unpack(translation))
+            end
         end
     end
 end
@@ -308,6 +318,7 @@ function love.update(dt)
     sky:draw()
     APP.cubes:draw()
     APP.objects:draw()
+    APP.ramps:draw()
     pivot.model:draw()
     MOUSE.draw()
 
@@ -361,6 +372,7 @@ function love.keypressed(k)
         MOUSE.set_mode"rotating"
     elseif MOUSE.mode~="hud" then
         if k=="n" then APP.clear() end
+        if k=="r" then ramp_mode = not ramp_mode end  -- Toggle ramp placement mode
         
         -- if k=="l" then APP.toggle.light = not APP.toggle.light end
         -- if k=="g" then APP.toggle.grid = not APP.toggle.grid end
