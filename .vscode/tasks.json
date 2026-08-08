@@ -6,6 +6,7 @@
         {
             "label": "RUN current project folder",
             "type": "shell",
+            "inAgents": true,
             "command": "cd ../ && love ${workspaceFolderBasename}",
             "group": {
                 "kind": "build",
