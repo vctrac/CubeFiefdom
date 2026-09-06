@@ -11,9 +11,9 @@ local o = {
 
 ---@param index string
 ---@param position table
-local function add(index,position)
+local function add(index, position)
     o.count = o.count+1
-    o.list[index] = { position = position, color= "white"}
+    o.list[index] = { name = "obj", position = position, color= "white"}
     return true
 end
 

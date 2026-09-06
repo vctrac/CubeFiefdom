@@ -26,7 +26,7 @@ RES = {
         light_grey_blue = {0.631, 0.729, 0.847},
     },
     image = {
-        atlas = lg.newImage(img.."tex.png"),
+        -- atlas = lg.newImage(img.."tex.png"),
         circle = lg.newImage(img.."circle.png"),
         object_card = lg.newImage(img.."object_card.png"),
         center = lg.newImage(img.."center.png"),
@@ -34,7 +34,12 @@ RES = {
         button_frame = lg.newImage(img_bttn.."button_frame.png"),
 
         --BUTTONS
-        pencil = lg.newImage(img_bttn.."pencil.png"),
+        tools = {
+            cube = lg.newImage(img_bttn.."tool_cube.png"),
+            ramp = lg.newImage(img_bttn.."tool_ramp.png"),
+            slab = lg.newImage(img_bttn.."tool_slab.png"),
+        },
+
         brush = lg.newImage(img_bttn.."brush.png"),
         rotate = lg.newImage(img_bttn.."rotate.png"),
         no_texture = lg.newImage(img_bttn.."no_texture.png"),
@@ -63,6 +68,8 @@ RES = {
         camera = lg.newImage(img.."camera_lens.png"),
     },
     model = {
+        slab = model.."slab.obj",
+        ramp = model.."ramp.obj",
         cube = model.."cube.obj",
         sphere = model.."sphere.obj",
     },
@@ -76,6 +83,24 @@ RES = {
         clouds = shader.."clouds.frag",
     }
 }
+
+
+RES.atlas = {
+    set = function(self, path)
+        self.image_path = path
+        self.image = lg.newImage(path)
+        
+        local aw,ah = self.image:getDimensions()
+        self.width = aw
+        self.rows = math.floor(aw/TILE_SIZE)
+        self.height = ah
+        self.colls = math.floor(ah/TILE_SIZE)
+        self.number_of_tiles = self.rows * self.colls
+    end
+}
+RES.atlas:set(img.."tex.png")
+
+
 local a = -0.505
 local b = 0.505
 RES.model.wired_cube = {

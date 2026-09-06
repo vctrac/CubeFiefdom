@@ -6,12 +6,13 @@
         {
             "label": "RUN current project folder",
             "type": "shell",
-            "command": "cd ../ && love ${workspaceFolderBasename}",
+            "command": "cd ../; love ${workspaceFolderBasename}",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "inAgents": true
         }
     ]
 }

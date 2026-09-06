@@ -1,1 +1,1 @@
-do local _={app_name="Cube Fiefdom",version="0.4",cubes={{0,0,0,0,0}},info={["0:0"]={ass="sas"}},cube_count=1,objects={},object_count=0};return _;end
+do local _={object_count=0, info={["0:1"]={"movable"}},version="0.4",app_name="Cube Fiefdom",cubes={{1,0,0,0,1},{0,0,0,0,0}},cube_count=2,objects={}};return _;end

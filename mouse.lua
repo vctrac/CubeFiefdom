@@ -26,7 +26,16 @@ local function get_side(pos, npos)
     end
     return npos
 end
-
+local ramp_direction_table = {west = 0, south = 90, east = 180, north = 270}
+local cube_settings = {
+    cube = {type = "cube"},
+    ramp = {
+        type = "ramp",
+        direction = "north"
+    },
+    slab = {type = "slab"},
+}
+local _count = 4
 MOUSE = {
     old_x = 0,
     old_y = 0,
@@ -35,6 +44,7 @@ MOUSE = {
     mode = "wait",
     tool = "pencil",
     texture = "0:0",
+    cube_type = "cube",
     multi = {},
     selected = {
         pos = vec3(),
@@ -47,9 +57,21 @@ function MOUSE.load()
     current_cube = g3d.newModel(RES.model.wired_cube)
     new_cube = g3d.newModel(RES.model.cube, nil)
     new_object = g3d.newSprite(RES.image"object",{scale = 0.5})
-    MOUSE:set_texture("0:0")
+    MOUSE.set_texture("0:0")
 end
-
+MOUSE.set_ramp_direction = function()
+    local td = { "west", "south", "east", "north"}
+    _count = (_count%4) +1
+    cube_settings.ramp.direction = td[_count]
+    new_cube:setRotation(0,0,math.rad(ramp_direction_table[cube_settings.ramp.direction]))
+    -- print(cube_settings.ramp.direction)
+    --local index_novo = ((index_alvo - 1) % #tabela) + 1
+end
+MOUSE.set_new_cube_type = function( tipo)
+    MOUSE.cube_type = tipo
+    local np = {MOUSE.selected.new:unpack()}
+    new_cube = g3d.newModel(RES.model[tipo], APP["texture"][MOUSE.texture], np, {0,0,math.rad(ramp_direction_table[cube_settings.ramp.direction])})
+end
 MOUSE.set_mode = function(mode)
     MOUSE.mode = mode
 end
@@ -86,11 +108,11 @@ MOUSE.get_cube_under = function( )
         MOUSE.set_mode"wait"
     end
 end
-MOUSE.set_texture = function(self, texture_index)
-    self.texture = texture_index
+MOUSE.set_texture = function( texture_index)
+    MOUSE.texture = texture_index
     new_cube.mesh:setTexture(APP["texture"][texture_index])
 
-    HUD.load_tool_info(texture_index)
+    -- HUD.load_tool_info(texture_index)
 end
 function MOUSE.draw()
     if MOUSE.mode=="edit" then
@@ -115,7 +137,8 @@ local mouse_tools = {
         pencil = function(mx,my,mb)
             if MOUSE.mode == "edit" then
                 if mb==1 then
-                    APP.cubes:add_cube( MOUSE.texture, MOUSE.selected.new:unpack())
+                    -- local tp = cube_type_table[MOUSE.cube_type]
+                    APP.cubes:add_cube( cube_settings[MOUSE.cube_type], MOUSE.texture, MOUSE.selected.new:unpack())
                 elseif mb==2 then
                     if APP.cubes:remove_cube(MOUSE.selected.id) then
                         MOUSE.set_mode"wait"
@@ -131,7 +154,7 @@ local mouse_tools = {
             elseif mb==2 then
                 local cube = APP.cubes:get_cube( MOUSE.selected.id)
                 if not cube then return end
-                MOUSE:set_texture(cube.texture)
+                MOUSE.set_texture(cube.texture)
             end
         end,
         select = function(mx,my,mb)

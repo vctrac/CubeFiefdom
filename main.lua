@@ -1,6 +1,8 @@
 if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
     require("lldebugger").start()
 end
+-- Adiciona a pasta 'library' e todas as suas subpastas ao caminho de busca
+package.path = package.path .. ";library/?.lua;library/?/init.lua"
 
 local lg = love.graphics
 local keydown = love.keyboard.isDown
@@ -11,7 +13,11 @@ CONFIG = {
 }
 
 TILE_SIZE = 16
-
+CUBE_TYPES = {
+    "cube",
+    "ramp",
+    "slab"
+}
 ---@class Cpml
 ---@module 'cpml'
 Cpml = require"library.cpml"
@@ -242,10 +248,12 @@ local selected = {
 local day_time = 9 --used to control the skysphere shader
 local day_time_multiplier = 1
 
-function love.load(...)
 
+function love.load(...)
+    
     APP.load()
     MOUSE.load()
+    HUD.load()
 
     sky = g3d.newModel(RES.model.sphere, nil, {0,0,-50}, nil, 500)
     sky.shader = love.graphics.newShader(g3d.shaderpath, RES.shader["sky"]) --gradient, grid, sky, clouds
@@ -254,9 +262,9 @@ function love.load(...)
     camera.sprite = g3d.newSprite(RES.image["camera"],{scale = 0.5})
     pivot.model = g3d.newSprite(RES.image["center"],{scale = 0.25})--g3d.newModel(DICE, lg.newImage("image/gimball.png"), nil,nil, 0.25)
 
-    for id,_ in pairs(APP.texture) do
-        HUD.new_texture_button(id)
-    end
+    -- for id,_ in pairs(APP.texture) do
+    --     HUD.new_texture_button(id)
+    -- end
     
     -- APP.cubes:add_info("0:0", "breakable", "true")
     -- APP.cubes:add_info("0:2", "walkable", true)
@@ -268,8 +276,8 @@ function love.update(dt)
     Key.alt = keydown("lalt")
     Key.shift = keydown("lshift")
 
-    day_time = day_time+0.1*dt*day_time_multiplier
-    sky.shader:send("Time",day_time)
+    -- day_time = day_time+0.1*dt*day_time_multiplier
+    -- sky.shader:send("Time",day_time)
 
     -- if MOUSE.stopped then
     --     MOUSE.move_x = 0
@@ -298,7 +306,7 @@ function love.update(dt)
         APP.light_shader:send("lightPosition", camera.position)
     end
 
-    -- HUD:update(dt)
+    HUD.update(dt)
     -- MOUSE.stopped = true
 
     lg.setCanvas({APP.canvas, depth=true})
@@ -331,9 +339,9 @@ function love.draw()
     else
         lg.draw(APP.canvas,0,0,0,APP.pixel_scale,APP.pixel_scale)
     end
-    if not APP.first_person_view then
-        HUD:draw()
-    end
+    -- if not APP.first_person_view then
+        HUD.draw()
+    -- end
 
     ---@DEBUG
     lg.setColor(1,1,1)
@@ -353,7 +361,9 @@ function love.keypressed(k)
         return
     end
     if Key.ctrl then
-        if k=='z' then
+        if k=='s' then
+            APP.save_obj()
+        elseif k=='z' then
             APP.undo()
         elseif k=='y' then
             APP.redo()
@@ -386,23 +396,34 @@ function love.keypressed(k)
     if not APP.first_person_view then
         selected:input_press(k)
     end
-    HUD.keypressed(k)
+    -- HUD.keypressed(k)
 end
 function love.keyreleased(k)
     if k=="lalt" then
-        local key = APP.selected_tool=="pencil" and "brush" or "pencil"
-        HUD.setToolActiveKey(key)
+        -- local key = APP.selected_tool=="pencil" and "brush" or "pencil"
+        -- HUD.setToolActiveKey(key)
     elseif k=="lctrl" then
         MOUSE.set_mode"wait"
     end
     if not APP.first_person_view then
         selected:input_release(k)
     end
+    if k=='1' then MOUSE.set_new_cube_type("cube")
+    elseif k=='2' then MOUSE.set_new_cube_type("ramp")
+    elseif k=='3' then MOUSE.set_new_cube_type("slab")
+    end
+    if MOUSE.cube_type == "ramp" then
+        if k=='r' then
+            MOUSE.set_ramp_direction()
+        end
+    end
+    -- HUD.keyreleased(k)
 end
 
 function love.mousepressed(mx,my, b)
     if APP.first_person_view then return end
 
+    HUD.mousepressed(mx,my, b)
     if b==3 then
         -- if Key.shift then
             ---@TODO: implement panning
@@ -414,15 +435,15 @@ function love.mousepressed(mx,my, b)
         MOUSE.old_y = my
     elseif MOUSE.mode=="edit" then
         -- MOUSE.pressed(mx,my,b)
-    else
-        if b==1 then HUD.pointer:raise("press") end
+    -- else
+    --     if b==1 then HUD.pointer:raise("press") end
     end
 end
 function love.mousereleased(mx,my, b)
     if APP.first_person_view then return end
-    if (b == 1) and not(MOUSE.active) then
-		HUD.pointer:raise("release")
-	end
+    -- if (b == 1) and not(MOUSE.active) then
+	-- 	HUD.pointer:raise("release")
+	-- end
     if b==3 then
         MOUSE.set_mode"wait"
     elseif MOUSE.mode=="edit" then
@@ -430,6 +451,7 @@ function love.mousereleased(mx,my, b)
     -- else
         -- if b==1 then HUD.pointer:raise("release") end
     end
+    HUD.mousereleased(mx,my, b)
 end
 function love.wheelmoved(x,y)
     if not APP.first_person_view then
@@ -441,7 +463,7 @@ end
 function love.mousemoved(mx,my, dx,dy)
     -- print(dx,dy)
     -- MOUSE.stopped = false
-    HUD.mouse_moved(mx,my)
+    HUD.mousemoved(mx,my, dx,dy)
     if MOUSE.mode=="hud_dialog" then return end
     if APP.first_person_view then
         camera.firstPersonLook(dx,dy)
@@ -452,12 +474,12 @@ function love.mousemoved(mx,my, dx,dy)
     --     MOUSE.move_x = dx
     --     MOUSE.move_y = dy
     else
-        local over,obj = HUD.is_overlaping()
-        if over then
-            MOUSE.set_mode(obj)
-        else
+        -- local over,obj = HUD.is_overlaping()
+        -- if over then
+        --     MOUSE.set_mode(obj)
+        -- else
             MOUSE.get_cube_under()
-        end
+        -- end
     end
 end
 
@@ -473,10 +495,8 @@ function love.filedropped(file)
     ---@TODO: method to load new textures
 end
 
-function love.textinput(t)
-    if MOUSE.mode=="hud_dialog" then
-        HUD.textinput(t)
-    end
+function love.textinput(text)
+    HUD.textinput(text)
 end
 
 function love.resize(w, h)

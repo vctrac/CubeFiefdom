@@ -30,7 +30,7 @@ do
         object_count = 3,
         object = {
             ["door_1"] = {name = "door", type = "interact", position = {-1,0,1}, color = "horizon", state = "locked", id = 1}, --with custom properties added
-            ["start"] = {name = "start", type = "mark", position = {-2,3,1}, color = "dull_red"}, --default properties
+            ["player_start"] = {name = "start", type = "mark", position = {-2,3,1}, color = "dull_red"}, --default properties
             ["key_1"] = {name = "key", type = "collect", position = {1,1,1}, id = 1, color = "sand"},
             -- {name = "potion", type = "collect", position = {0,0,0}},
             -- {name = "door", type = "interact", position = {0,0,0}},

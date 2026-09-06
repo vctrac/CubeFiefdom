@@ -20,21 +20,20 @@ local function info()
     end
 
     ---@param id string
-    ---@param key string
-    ---@param value any
-    I.add = function( self, id, key, value)
+    ---@param tag string
+    I.add = function( self, id, tag)
         if not self.list[id] then
             self.list[id] = {}
         end
-
-        local v = value
-        local isBool = string2bool[string.lower(value)]
-        if tonumber(v) then
-            v = tonumber(v)
-        elseif isBool ~=nil then
-            v = isBool
-        end
-        self.list[id][key] = v
+        table.insert(self.list[id], tag)
+        -- local v = value
+        -- local isBool = string2bool[string.lower(value)]
+        -- if tonumber(v) then
+        --     v = tonumber(v)
+        -- elseif isBool ~=nil then
+        --     v = isBool
+        -- end
+        -- self.list[id][key] = v
     end
 
     ---@param id string

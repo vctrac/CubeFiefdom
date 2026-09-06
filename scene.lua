@@ -12,68 +12,189 @@ local Scene = {
     count = 0,
 }
 
---This function was taken from the g3d_voxel demo and franksteined here
---[https://github.com/groverburger/g3d_voxel/blob/master/lib/chunkremesh.lua]
-local function remesh()
-    local index = 1
-    local verts = {}
-    local function addFace(x,y,z, mx,my,mz, u,v, flip)
-        for i=1, 6 do
-            local df = 0.001 --this variable here prevents texture bleeding
-            local pu = 1/tile_row_size - df
-            -- local pv = 1/tile_column_size - df
-            local primary = i%2 == (flip and 0 or 1)
-            local secondary = i > 2 and i < 6
-            verts[index] = {}
-            verts[index][1]  = x + (mx == 1 and primary and 1 or 0) + (mx == 2 and secondary and 1 or 0)
-            verts[index][2]  = y + (my == 1 and primary and 1 or 0) + (my == 2 and secondary and 1 or 0)
-            verts[index][3]  = z + (mz == 1 and primary and 1 or 0) + (mz == 2 and secondary and 1 or 0)
-            verts[index][4]  = u + (primary   and pu or df)
-            verts[index][5]  = v + (secondary and df or pu)
-            verts[index][6]  = 0
-            verts[index][7]  = 0
-            verts[index][8]  = 1
-            verts[index][9]  = 255
-            verts[index][10] = 255
-            verts[index][11] = 255
-            verts[index][12] = 155
-            index = index+1
-        end
+local function get_corners(x, y, z, tipo)
+    local xv,yv,zv = 1,1,1
+    if tipo=="slab" then
+        zv = 0.5
+    end
+    return {
+        {x,   y,   z},   -- 1: Inferior Frontal Esquerda
+        {x+xv, y,   z},   -- 2: Inferior Frontal Direita
+        {x+xv, y+yv, z},   -- 3: Inferior Traseira Direita
+        {x,   y+yv, z},   -- 4: Inferior Traseira Esquerda
+        {x,   y,   z+zv}, -- 5: Superior Frontal Esquerda
+        {x+xv, y,   z+zv}, -- 6: Superior Frontal Direita
+        {x+xv, y+yv, z+zv}, -- 7: Superior Traseira Direita
+        {x,   y+yv, z+zv}, -- 8: Superior Traseira Esquerda
+    }
+end
+
+local function addFace(p1, p2, p3, p4, u, v, verts, flip_winding, mtype, rotation)
+    -- p1 até p4 são tabelas {x, y, z}
+    local order = flip_winding and {1, 4, 3, 3, 2, 1} or {1, 2, 3, 3, 4, 1}
+    local points = {p1, p2, p3, p4}
+    
+    local df = 0.001
+    local pu = 1/tile_row_size - df
+    local pv = 1/tile_column_size - df
+
+    if mtype == "slab" then
+        pv = pv*0.5
+    end
+    -- Coordenadas base
+    local u0, v0 = u + df, v + df -- Topo Esq
+    local u1, v1 = u + pu, v + df -- Topo Dir
+    local u2, v2 = u + pu, v + pv -- Baixo Dir
+    local u3, v3 = u + df, v + pv -- Baixo Esq
+
+    -- Tabela de UVs originais
+    local uvs = { {u0,v0}, {u1,v1}, {u2,v2}, {u3,v3} }
+
+    -- Rotação de UV (Shift na tabela)
+    if rotation then
+        uvs = { {u3,v3}, {u0,v0}, {u1,v1}, {u2,v2} }
     end
 
-    for _,cube in pairs(Scene.list) do
-        local x,y,z = cube.position[1], cube.position[2], cube.position[3]
-        local u,v = unpack(cube.uv)
-        u = u/tile_row_size
-        v = v/tile_column_size
-        local nc = Scene:get_cube( {x-1,y,z})
-        if not nc or nc.dynamic then addFace(x,y,z,   0,1,2, u,v) end --front
-        nc = Scene:get_cube( {x,y+1,z})
-        if not nc or nc.dynamic then addFace(x,y+1,z, 1,0,2, u,v) end --left
-        nc = Scene:get_cube( {x,y,z-1})
-        if not nc or nc.dynamic then addFace(x,y,z,   1,2,0, u,v) end --botton
-        
-        nc = Scene:get_cube( {x+1,y,z})
-        if not nc or nc.dynamic then addFace(x+1,y,z, 0,1,2, u,v, true) end --back
-        nc = Scene:get_cube( {x,y-1,z})
-        if not nc or nc.dynamic then addFace(x,y,z,   1,0,2, u,v, true) end --right
-        nc = Scene:get_cube( {x,y,z+1})
-        if not nc or nc.dynamic then addFace(x,y,z+1, 1,2,0, u,v, true) end --top
+    if mtype == "triangle" then
+        uvs[4] = uvs[1]
+    end
 
+    for i = 1, 6 do
+        local idx = order[i]
+        local p = points[idx]
+        local uv = uvs[idx]
+        
+        table.insert(verts, {
+            p[1], p[2], p[3],   -- Posição
+            uv[1], uv[2],       -- UV
+            0, 0, 1,            -- Normal (g3d:makeNormals resolve depois)
+            255, 255, 255, 255  -- Cor
+        })
+    end
+end
+
+local ramp_defs = {
+    north = { slope = {1,2,7,8}, sideL = {1,4,8,8}, sideR = {2,3,7,7}, back = {3,4,8,7}, back_check = {0,1,0} },
+    south = { slope = {4,3,6,5}, sideL = {4,1,5,5}, sideR = {3,2,6,6}, back = {1,2,6,5}, back_check = {0,-1,0} },
+    west  = { slope = {2,5,8,3}, sideL = {3,4,8,8}, sideR = {2,1,5,5}, back = {4,1,5,8}, back_check = {-1,0,0} },
+    east  = { slope = {1,6,7,4}, sideL = {4,3,7,7}, sideR = {1,2,6,6}, back = {2,3,7,6}, back_check = {1,0,0} },
+}
+local object_types = {
+    cube = function(obj, verts)
+        local x,y,z = obj.position[1], obj.position[2], obj.position[3]
+        local c = get_corners(x, y, z)
+        local u, v = obj.uv[1]/tile_row_size, obj.uv[2]/tile_column_size
+
+        -- Face botton
+        local gc = Scene:get_cube({x, y, z-1})
+        if not gc or gc.type~="cube" then addFace(c[1], c[2], c[3], c[4], u, v, verts, true) end
+        -- Face top
+        if not Scene:get_cube({x, y, z+1}) then addFace(c[5], c[6], c[7], c[8], u, v, verts) end
+        -- Face left
+        gc = Scene:get_cube({x, y-1, z})
+        if not gc or gc.type~="cube" then addFace(c[1], c[2], c[6], c[5], u, v, verts) end
+        -- Face right
+        gc = Scene:get_cube({x, y+1, z})
+        if not gc or gc.type~="cube" then addFace(c[3], c[4], c[8], c[7], u, v, verts) end
+        -- Face back
+        gc = Scene:get_cube({x-1, y, z})
+        if not gc or gc.type~="cube" then addFace(c[5], c[8], c[4], c[1], u, v, verts) end
+        -- Face front
+        gc = Scene:get_cube({x+1, y, z})
+        if not gc or gc.type~="cube" then addFace(c[2], c[3], c[7], c[6], u, v, verts) end
+    end,
+    slab = function(obj, verts)
+        local x,y,z = obj.position[1], obj.position[2], obj.position[3]
+        local c = get_corners(x, y, z, obj.type)
+        local u, v = obj.uv[1]/tile_row_size, obj.uv[2]/tile_column_size
+
+        -- Face botton
+        local gc = Scene:get_cube({x, y, z-1})
+        if not gc or gc.type~="cube" then addFace(c[1], c[2], c[3], c[4], u, v, verts, true) end
+        -- Face top
+        addFace(c[5], c[6], c[7], c[8], u, v, verts)
+        -- Face left
+        gc = Scene:get_cube({x, y-1, z})
+        if not gc or gc.type=="ramp" then addFace(c[1], c[2], c[6], c[5], u, v, verts, nil,"slab") end
+        -- Face right
+        gc = Scene:get_cube({x, y+1, z})
+        if not gc or gc.type=="ramp" then addFace(c[3], c[4], c[8], c[7], u, v, verts, nil,"slab") end
+        -- Face back
+        gc = Scene:get_cube({x-1, y, z})
+        if not gc or gc.type=="ramp" then addFace(c[5], c[8], c[4], c[1], u, v, verts, nil,"slab") end
+        -- Face front
+        gc = Scene:get_cube({x+1, y, z})
+        if not gc or gc.type=="ramp" then addFace(c[2], c[3], c[7], c[6], u, v, verts, nil,"slab") end
+    end,
+    ramp = function(obj, verts)
+        local odir = obj.direction
+        local d = ramp_defs[odir]
+        local x, y, z = obj.position[1], obj.position[2], obj.position[3]
+        local c = get_corners(x, y, z)
+        local u, v = obj.uv[1]/tile_row_size, obj.uv[2]/tile_column_size
+
+        local dir = {
+            north = {
+                sideL = true,
+            },
+            south = {
+                sideR = true,
+                top = true
+            },
+            west = {
+                sideR = true,
+                top = true,
+                rot = true
+            },
+            east = {
+                sideL = true,
+                rot = true
+            },
+        }
+        -- Face botton
+        local gc = Scene:get_cube({x, y, z-1})
+        if not gc or gc.type~="cube" then addFace(c[1], c[2], c[3], c[4], u, v, verts, true) end
+
+        -- 1. Face Inclinada
+        addFace(c[d.slope[1]], c[d.slope[2]], c[d.slope[3]], c[d.slope[4]], u, v, verts, dir[odir].top, nil, dir[odir].rot)
+        
+        -- 2. Laterais
+        addFace(c[d.sideL[1]], c[d.sideL[2]], c[d.sideL[3]], c[d.sideL[4]], u, v, verts, dir[odir].sideL, "triangle")
+        addFace(c[d.sideR[1]], c[d.sideR[2]], c[d.sideR[3]], c[d.sideR[4]], u, v, verts, dir[odir].sideR, "triangle")
+        
+        -- 3. Culling da face traseira
+        local bc = d.back_check
+        gc = Scene:get_cube({x+bc[1], y+bc[2], z+bc[3]})
+        if not gc or gc.type~="cube" then addFace(c[d.back[1]], c[d.back[2]], c[d.back[3]], c[d.back[4]], u, v, verts) end
+    end
+}
+local function remesh()
+    local verts = {}
+    for _, obj in pairs(Scene.list) do
+        object_types[obj.type](obj, verts)
     end
     Scene.model = g3d.newModel(verts, APP.atlas, {-0.5,-0.5,-0.5})
     Scene.model:makeNormals()
-
 end
 -- Add a new cube to the cubes table array
 ---@function add
 ---@param index string
 ---@param texture_id string
 ---@param position table
-local add = function(index, texture_id, position)
+local add = function(index, texture_id, position, settings)
     local ipos = From_id(texture_id)
+    settings = settings or {}
     Scene.count = Scene.count+1
-    Scene.list[index] = {uv = ipos, texture = texture_id, position = position}
+    local nc = {
+        type = settings.type,
+        uv = ipos,
+        texture = texture_id,
+        position = position
+    }
+    if settings.type=="ramp" then
+        nc.direction = settings.direction
+    end
+    Scene.list[index] = nc
     -- Scene.list[index] = {position = position, object = true}
     remesh()
     return true
@@ -113,7 +234,7 @@ Scene.new=function(self)
     local id = "0:0:0"
     local texture_id = "0:0"
 
-    add(id, texture_id, {0,0,0})
+    add(id, texture_id, {0,0,0}, {type ="cube"})
     remesh()
     self.count = 1
 end
@@ -143,14 +264,15 @@ end
 ---@param y integer
 ---@param z integer
 ---@return boolean 
-Scene.add_cube = function(self, texture_id, x, y, z)
+Scene.add_cube = function(self, settings, texture_id, x, y, z)
+    -- err()
     local pos = {x,y,z}
     local index = To_id(pos)
     if self.list[index] then return false end
 
-    APP.add_change({"cube","add", index, texture_id})
+    APP.add_change({settings.type,"add", index, texture_id})
 
-    return add(index, texture_id, pos)
+    return add(index, texture_id, pos, settings)
 end
 
 -- Remove a cube from the cubes table array

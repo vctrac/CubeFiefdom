@@ -25,7 +25,8 @@ local function save_lua( data, info, filename)
         table.insert(t.cubes, coords)
     end
     for _,k in pairs(data.objects) do
-        table.insert(t.objects, k)
+        -- table.insert(t.objects, k)
+        t.objects[k.name] = k
     end
     -- t.info= data.info
     save:write(serpent.dump(t))

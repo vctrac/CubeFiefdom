@@ -247,6 +247,7 @@ end
 
 Tools.load_object_info = function(scene, id) --esse
     Tools.clear_info("object")
+    -- print"cleared"
     local info = APP.selected_info:get(id)
     for k,v in pairs(info) do
         Tools.new_info(scene, "object", k, v)
