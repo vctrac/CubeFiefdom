@@ -13,11 +13,12 @@ local change_index = 0
 local undo_list = {}
 local redo_list = {}
 local pixel_scale = 4
-local types = {cube=1, object=1}
+local types = {cube=1, object=1, ramp=1}
 
 APP = {
     cubes = require"scene",
     objects = require"core.modules.object",
+    ramps = require"ramps",
     -- object_info = require"core.modules.info",
     toggle = {light=true, grid=false, texture=true, retro=false},
     atlas = nil,
@@ -59,6 +60,7 @@ function APP.clear()
     change_index = 0
     APP.cubes:clear()
     APP.cubes:new()
+    APP.ramps:clear()
 end
 
 function APP.load_texture(filename)
@@ -94,15 +96,15 @@ function APP.get(id)
         return false
     end
 
-    return APP.objects.list[index] or APP.cubes.list[index]
+    return APP.objects.list[index] or APP.cubes.list[index] or APP.ramps.list[index]
 end
 
---Returns either object, cube, empty or nil
+--Returns either object, cube, ramp, empty or nil
 ---@param id string
 ---@return string type
 function APP.get_type(id)
     if type(id)~="string" then return "false" end
-    return (APP.objects.list[id] and "object") or (APP.cubes.list[id] and "cube") or "empty"
+    return (APP.objects.list[id] and "object") or (APP.cubes.list[id] and "cube") or (APP.ramps.list[id] and "ramp") or "empty"
 end
 
 function APP.add_change(tab)--{type, cmd, position_index, texture}
@@ -142,10 +144,12 @@ function APP.redo()
         APP.cubes.redo(op)
     elseif t=="object" then
         APP.objects.redo(op)
+    elseif t=="ramp" then
+        APP.ramps.redo(op)
     end
 end
 
-function APP.undo( )
+function APP.undo()
     if not undo_list[change_index] then return end
 
     local op = {}
@@ -166,6 +170,8 @@ function APP.undo( )
         APP.cubes.undo(op)
     elseif t=="object" then
         APP.objects.undo(op)
+    elseif t=="ramp" then
+        APP.ramps.undo(op)
     end
 end
 
@@ -179,6 +185,8 @@ function APP.save_lua()
     data.cube_count = APP.cubes.count
     data.objects = APP.objects.list
     data.object_count = APP.objects.count
+    data.ramps = APP.ramps.list
+    data.ramp_count = APP.ramps.count
 
     file_handler.save("lua", data, APP.texture_info:save_data(), CONFIG.save_name)
 end
@@ -189,6 +197,8 @@ function APP.save_json()
     data.cube_count = APP.cubes.count
     data.objects = APP.objects.list
     data.object_count = APP.objects.count
+    data.ramps = APP.ramps.list
+    data.ramp_count = APP.ramps.count
 
     file_handler.save("json", data, APP.info:save_data(), CONFIG.save_name)
 end
@@ -203,6 +213,7 @@ function APP.drop_file(filename, ext)
         local data = file_handler.load(ext, filename)
         APP.cubes:load_data(data)
         APP.objects:load_data(data)
+        APP.ramps:load_data(data)
         APP.texture_info:load_data(data)
         APP.selected_info:load_data(data)
         data = nil
